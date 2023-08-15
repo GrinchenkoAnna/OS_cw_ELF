@@ -7,7 +7,7 @@ void read_header(const char* filename)
     FILE* file_pointer;
     Elf64_Ehdr header;
 
-    file_pointer = fopen("example", "r");
+    file_pointer = fopen(filename, "r");
     if (!file_pointer)
     {
         perror ("Невозможно открыть ELF-файл");
@@ -32,7 +32,7 @@ void read_header(const char* filename)
     }
     printf("\n");
 
-    printf("  Класс:\t\t\t");
+    printf("  Класс:\t\t\t\t");
     switch (header.e_ident[EI_CLASS])
     {
         case ELFCLASS32:
@@ -52,7 +52,7 @@ void read_header(const char* filename)
             break;
     }
 
-    printf("  Данные:\t\t\tдополнение до 2, ");
+    printf("  Данные:\t\t\t\tдополнение до 2, ");
     switch (header.e_ident[EI_DATA])
     {
         case ELFDATA2LSB:
@@ -72,7 +72,7 @@ void read_header(const char* filename)
             break;
     }
 
-    printf("  Версия:\t\t\t");
+    printf("  Версия:\t\t\t\t");
     switch (header.e_ident[EI_VERSION])
     {
         case EV_CURRENT:
@@ -88,7 +88,7 @@ void read_header(const char* filename)
             break;
     }
 
-    printf("  OS/ABI:\t\t\t");
+    printf("  OS/ABI:\t\t\t\t");
     switch (header.e_ident[EI_OSABI])
     {
         case ELFOSABI_NONE:
@@ -160,11 +160,11 @@ void read_header(const char* filename)
             break;
     }
 
-    printf("  Версия ABI:\t\t\t%d\n", header.e_ident[EI_ABIVERSION]);
+    printf("  Версия ABI:\t\t\t\t%d\n", header.e_ident[EI_ABIVERSION]);
 
-    printf("  Начало заполнителя:\t\t%d\n", header.e_ident[EI_PAD]);
+    printf("  Начало заполнителя:\t\t\t%d\n", header.e_ident[EI_PAD]);
 
-    printf("  Тип объектного файла:\t\t");
+    printf("  Тип объектного файла:\t\t\t");
     switch (header.e_type)
     {
         case ET_NONE:
@@ -212,7 +212,7 @@ void read_header(const char* filename)
             break;
     }
 
-    printf("  Архитектура:\t\t\t");
+    printf("  Архитектура:\t\t\t\t");
     switch (header.e_machine)
     {
         case EM_NONE:
@@ -643,8 +643,296 @@ void read_header(const char* filename)
             printf("Analog Devices SHARC family\n");
             break;
 
-        case EM_SCORE7: //135/253
+        case EM_ECOG2: 
+            printf("Cyan Technology eCOG2\n");
+            break;
+
+        case EM_SCORE7: 
             printf("Sunplus S+core7 RISC\n");
+            break;
+
+        case EM_DSP24: 
+            printf("New Japan Radio (NJR) 24-bit DSPC\n");
+            break;
+
+        case EM_VIDEOCORE3: 
+            printf("Broadcom VideoCore III\n");
+            break;
+
+        case EM_LATTICEMICO32: 
+            printf("RISC for Lattice FPGA\n");
+            break;
+
+        case EM_SE_C17: 
+            printf("Seiko Epson C17\n");
+            break;
+
+        case EM_TI_C6000: 
+            printf("Texas Instruments TMS320C6000 DSP\n");
+            break;
+
+        case EM_TI_C2000: 
+            printf("Texas Instruments TMS320C2000 DSP\n");
+            break;
+
+        case EM_TI_C5500: 
+            printf("Texas Instruments TMS320C55x DSP\n");
+            break;
+
+        case EM_TI_ARP32: 
+            printf("Texas Instruments App. Specific RISC\n");
+            break;
+
+        case EM_TI_PRU: 
+            printf("Texas Instruments Prog. Realtime Unit\n");
+            break;
+
+        case EM_MMDSP_PLUS: 
+            printf("STMicroelectronics 64bit VLIW DSP\n");
+            break;
+
+        case EM_CYPRESS_M8C: 
+            printf("Cypress M8C\n");
+            break;
+
+        case EM_R32C: 
+            printf("Renesas R32C\n");
+            break;
+
+        case EM_TRIMEDIA: 
+            printf("NXP Semi. TriMedia\n");
+            break;
+
+        case EM_QDSP6: 
+            printf("QUALCOMM DSP6\n");
+            break;
+
+        case EM_8051: 
+            printf("Intel 8051 and variants\n");
+            break;
+
+        case EM_STXP7X: 
+            printf("STMicroelectronics STxP7x\n");
+            break;
+
+        case EM_NDS32: 
+            printf("Andes Tech. compact code emb. RISC\n");
+            break;
+
+        case EM_ECOG1X: 
+            printf("Cyan Technology eCOG1X\n");
+            break;
+
+        case EM_MAXQ30: 
+            printf("Dallas Semi. MAXQ30 mc\n");
+            break;
+
+        case EM_XIMO16: 
+            printf("New Japan Radio (NJR) 16-bit DSP\n");
+            break;
+
+        case EM_MANIK: 
+            printf("M2000 Reconfigurable RISC\n");
+            break;
+
+        case EM_CRAYNV2: 
+            printf("Cray NV2 vector architecture\n");
+            break;
+
+        case EM_RX: 
+            printf("Renesas RX\n");
+            break;
+
+        case EM_METAG: 
+            printf("Imagination Tech. META\n");
+            break;
+
+        case EM_MCST_ELBRUS: 
+            printf("MCST Elbrus\n");
+            break;
+
+        case EM_ECOG16: 
+            printf("Cyan Technology eCOG16\n");
+            break;
+
+        case EM_CR16: 
+            printf("National Semi. CompactRISC CR16\n");
+            break;
+
+        case EM_ETPU: 
+            printf("Freescale Extended Time Processing Unit\n");
+            break;
+
+        case EM_SLE9X: 
+            printf("Infineon Tech. SLE9X\n");
+            break;
+
+        case EM_L10M: 
+            printf("Intel L10M\n");
+            break;
+
+        case EM_K10M: 
+            printf("Intel K10M\n");
+            break;
+
+        case EM_AARCH64: 
+            printf("ARM AARCH64\n");
+            break;
+
+        case EM_AVR32: 
+            printf("Amtel 32-bit microprocessor\n");
+            break;
+
+        case EM_STM8: 
+            printf("STMicroelectronics STM8\n");
+            break;
+
+        case EM_TILE64: 
+            printf("Tilera TILE64\n");
+            break;
+
+        case EM_TILEPRO: 
+            printf("Tilera TILEPro\n");
+            break;
+
+        case EM_MICROBLAZE: 
+            printf("Xilinx MicroBlaze\n");
+            break;
+
+        case EM_CUDA: 
+            printf("NVIDIA CUDA\n");
+            break;
+
+        case EM_TILEGX: 
+            printf("Tilera TILE-Gx\n");
+            break;
+
+        case EM_CLOUDSHIELD: 
+            printf("CloudShield\n");
+            break;
+
+        case EM_COREA_1ST: 
+            printf("KIPO-KAIST Core-A 1st gen.\n");
+            break;
+
+        case EM_COREA_2ND: 
+            printf("KIPO-KAIST Core-A 2nd gen.\n");
+            break;
+
+        case EM_ARCV2: 
+            printf("Synopsys ARCv2 ISA.\n");
+            break;
+
+        case EM_OPEN8: 
+            printf("Open8 RISC\n");
+            break;
+
+        case EM_RL78: 
+            printf("Renesas RL78\n");
+            break;
+
+        case EM_VIDEOCORE5: 
+            printf("Broadcom VideoCore V\n");
+            break;
+
+        case EM_78KOR: 
+            printf("Renesas 78KOR\n");
+            break;
+
+        case EM_56800EX: 
+            printf("Freescale 56800EX DSC\n");
+            break;
+
+        case EM_BA1: 
+            printf("Beyond BA1\n");
+            break;
+
+        case EM_BA2: 
+            printf("Beyond BA2\n");
+            break;
+
+        case EM_XCORE: 
+            printf("XMOS xCORE\n");
+            break;
+
+        case EM_MCHP_PIC: 
+            printf("Microchip 8-bit PIC(r)\n");
+            break;
+
+        case EM_INTELGT: 
+            printf("Intel Graphics Technology\n");
+            break;  
+
+        case EM_KM32: 
+            printf("KM211 KM32\n");
+            break;
+
+        case EM_KMX32: 
+            printf("KM211 KMX32\n");
+            break;
+
+        case EM_EMX16: 
+            printf("KM211 EMX16\n");
+            break;
+
+        case EM_EMX8: 
+            printf("KM211 EMX8\n");
+            break;
+
+        case EM_KVARC: 
+            printf("KM211 KVARC\n");
+            break;
+
+        case EM_CDP: 
+            printf("Paneve CDP\n");
+            break;
+
+        case EM_COGE: 
+            printf("Cognitive Smart Memory Processor\n");
+            break;
+
+        case EM_COOL: 
+            printf("Bluechip CoolEngine\n");
+            break;
+
+        case EM_NORC: 
+            printf("Nanoradio Optimized RISC\n");
+            break;
+
+        case EM_CSR_KALIMBA: 
+            printf("CSR Kalimba\n");
+            break;
+
+        case EM_Z80: 
+            printf("Zilog Z80\n");
+            break;
+
+        case EM_VISIUM: 
+            printf("Controls and Data Services VISIUMcore\n");
+            break;
+
+        case EM_FT32: 
+            printf("FTDI Chip FT32\n");
+            break;
+
+        case EM_MOXIE: 
+            printf("Moxie processor\n");
+            break;
+
+        case EM_AMDGPU: 
+            printf("AMD GPU\n");
+            break;
+
+        case EM_RISCV: 
+            printf("RISC-V\n");
+            break;
+
+        case EM_BPF: 
+            printf("Linux BPF -- in-kernel virtual machine\n");
+            break;
+
+        case EM_CSKY: 
+            printf("C-SKY\n");
             break;
 
         default:
@@ -652,6 +940,27 @@ void read_header(const char* filename)
             break;
     }
 
+    printf("  Версия:\t\t\t\t0x%x\n", header.e_version);
+    
+    printf("  Адрес точки входа:\t\t\t0x%lx\n", header.e_entry);
+    
+    printf("  Начало заголовков программы:\t\t%ld (байтов в файле)\n", header.e_phoff);
+
+    printf("  Начало заголовков раздела:\t\t%ld (байтов в файле)\n", header.e_shoff);
+
+    printf("  Флаги:\t\t\t\t0x%x\n", header.e_flags);
+
+    printf("  Размер заголовка ELF-файла:\t\t%d (байтов)\n", header.e_ehsize);
+
+    printf("  Размер программных заголовков:\t%d (байтов)\n", header.e_phentsize);
+
+    printf("  Число заголовков программ:\t\t%d\n", header.e_phnum);
+
+    printf("  Размер заголовков секций:\t\t%d (байтов)\n", header.e_shentsize);
+
+    printf("  Число заголовков секций:\t\t%d\n", header.e_shnum);
+
+    printf("  Индекс заголовка секции, содержащей\n  имена остальных секций ELF-файла:\t%d\n", header.e_shstrndx);
 
     printf("\n");
     fclose(file_pointer);
@@ -660,6 +969,8 @@ void read_header(const char* filename)
 int main()
 {    
     read_header("example");
+
+    //read_header("example");
 
     return 0;
 }
