@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <elf.h>
+
+long start_of_section_headers = 0;
+int number_of_section_headers = 0;
+int section_header_string_table_index = 0;
 
 void read_header(const char* filename)
 {
@@ -944,25 +949,83 @@ void read_header(const char* filename)
     
     printf("  Адрес точки входа:\t\t\t0x%lx\n", header.e_entry);
     
-    printf("  Начало заголовков программы:\t\t%ld (байтов в файле)\n", header.e_phoff);
+    printf("  Начало заголовков программы:\t\t%lx (байтов в файле)\n", \
+    header.e_phoff);
 
-    printf("  Начало заголовков раздела:\t\t%ld (байтов в файле)\n", header.e_shoff);
+    printf("  Начало заголовков раздела:\t\t%lx (байтов в файле)\n", \
+            header.e_shoff);
+    start_of_section_headers = header.e_shoff;
 
     printf("  Флаги:\t\t\t\t0x%x\n", header.e_flags);
 
     printf("  Размер заголовка ELF-файла:\t\t%d (байтов)\n", header.e_ehsize);
 
-    printf("  Размер программных заголовков:\t%d (байтов)\n", header.e_phentsize);
+    printf("  Размер программных заголовков:\t%d (байтов)\n", \
+            header.e_phentsize);
 
     printf("  Число заголовков программ:\t\t%d\n", header.e_phnum);
 
     printf("  Размер заголовков секций:\t\t%d (байтов)\n", header.e_shentsize);
 
     printf("  Число заголовков секций:\t\t%d\n", header.e_shnum);
+    number_of_section_headers = header.e_shnum;
 
-    printf("  Индекс заголовка секции, содержащей\n  имена остальных секций ELF-файла:\t%d\n", header.e_shstrndx);
+    printf("  Индекс заголовка секции, содержащей\n  имена остальных секций \
+            ELF-файла:\t%d\n", header.e_shstrndx);
+    section_header_string_table_index = header.e_shstrndx;
 
     printf("\n");
+    fclose(file_pointer);
+}
+
+void read_sections(const char* filename)
+{
+    Elf64_Shdr *section_headers; //массив указателей на структуры
+    section_headers = (Elf64_Shdr*)malloc(number_of_section_headers);
+
+    FILE* file_pointer; 
+    file_pointer = fopen(filename, "r");
+    fseek(file_pointer, start_of_section_headers, SEEK_SET); 
+    /*в массив считывается определенное ранее число указателей на структуры*/   
+    fread(section_headers, sizeof(Elf64_Shdr), number_of_section_headers, \
+          file_pointer);
+
+    if (number_of_section_headers%10 == 1)
+    {
+        printf("Имеется %d заголовок разделов, начиная со смещения 0x%lx:\n", \
+                number_of_section_headers, start_of_section_headers);
+    }
+    else if (number_of_section_headers%10 == 2 
+             || number_of_section_headers%10 == 3
+             || number_of_section_headers%10 == 4)
+    {
+        printf("Имеется %d заголовка разделов, начиная со смещения 0x%lx:\n", \
+                number_of_section_headers, start_of_section_headers);
+    }
+    else
+    {
+        printf("Имеется %d заголовков разделов, начиная со смещения 0x%lx:\n", \
+                number_of_section_headers, start_of_section_headers);
+    }
+
+    printf("\nЗаголовки разделов:\n");
+    printf("  [Нм]\tИмя\t\t\tТип\t\tАдрес\t\tСмещ\tРазм\tES\tФлаг\tЛк\t"
+           "Инф\tAlign\n");
+
+    fseek(file_pointer, \
+          section_headers[section_header_string_table_index].sh_offset, \
+          SEEK_SET);
+    int size_of_section = section_headers[section_header_string_table_index].sh_size;
+    char string_keeper[size_of_section];    
+    fread(string_keeper, 1, size_of_section, file_pointer);
+    
+    for (int i = 0; i < number_of_section_headers; i++)
+    {
+        printf("  [%2d]\t", i);
+        printf("%s\n", &string_keeper[section_headers[i].sh_name]);
+
+    }
+
     fclose(file_pointer);
 }
 
@@ -970,7 +1033,7 @@ int main()
 {    
     read_header("example");
 
-    //read_header("example");
+    read_sections("example");
 
     return 0;
 }
