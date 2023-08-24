@@ -7,6 +7,7 @@ long start_of_section_headers = 0;
 int number_of_section_headers = 0;
 int section_header_string_table_index = 0;
 
+//header
 void read_header(const char* filename)
 {
     FILE* file_pointer;
@@ -978,6 +979,393 @@ void read_header(const char* filename)
     fclose(file_pointer);
 }
 
+//sections
+void print_sh_type(int i, Elf64_Shdr *section_headers)
+{
+    switch (section_headers[i].sh_type)
+    {
+        case SHT_NULL:
+            printf("NULL                ");
+            break;
+                
+        case SHT_PROGBITS:
+            printf("PROGBITS            ");
+            break;
+            
+        case SHT_SYMTAB:
+            printf("SYMTAB              ");
+            break;
+                
+        case SHT_STRTAB:
+            printf("STRTAB              ");
+            break;
+            
+        case SHT_RELA:
+            printf("RELA                ");
+            break;
+                
+        case SHT_HASH:
+            printf("HASH                ");
+            break;
+                
+        case SHT_DYNAMIC:
+            printf("DYNAMIC             ");
+            break;
+            
+        case SHT_NOTE:
+            printf("NOTE                ");
+            break;
+                
+        case SHT_NOBITS:
+            printf("NOBITS              ");
+            break;
+                
+        case SHT_REL:
+            printf("NOBITS              ");
+            break;
+            
+        case SHT_SHLIB:
+            printf("NOBITS              ");
+            break;
+            
+        case SHT_DYNSYM:
+            printf("DYNSYM              ");
+            break;
+                
+        case SHT_INIT_ARRAY:
+            printf("INIT_ARRAY          ");
+            break;
+            
+        case SHT_FINI_ARRAY:
+            printf("FINI_ARRAY          ");
+            break;
+                
+        case SHT_PREINIT_ARRAY:
+            printf("PREINIT_ARRAY       ");
+            break;
+                
+        case SHT_GROUP:
+            printf("GROUP               ");
+            break;
+                
+        case SHT_SYMTAB_SHNDX:
+            printf("SYMTAB_SHNDX        ");
+            break;
+                
+        case SHT_NUM:
+            printf("NUM                 ");
+            break;
+
+        case SHT_LOOS:
+            printf("LOOS                ");
+            break;
+                
+        case SHT_GNU_ATTRIBUTES:
+            printf("GNU_ATTRIBUTES      ");
+            break;
+                
+        case SHT_GNU_HASH:
+            printf("GNU_HASH            ");
+            break;
+            
+        case SHT_GNU_LIBLIST:
+            printf("GNU_LIBLIST         ");
+            break;
+                
+        case SHT_CHECKSUM:
+            printf("GNU_CHECKSUM        ");
+            break;
+                
+        case SHT_LOSUNW:
+            printf("LOSUNW              ");
+            break;
+        
+        //Дублирует по значению SHT_LOSUNW
+        // case SHT_SUNW_move:
+        //     printf("SUNW_move\n");
+        //     break;
+        
+        case SHT_SUNW_COMDAT:
+            printf("SUNW_COMDAT         ");
+            break;
+                
+        case SHT_SUNW_syminfo:
+            printf("SUNW_syminfo        ");
+            break;
+            
+        case SHT_GNU_verdef:
+            printf("GNU_verdef          ");
+            break;
+            
+        case SHT_GNU_verneed:
+            printf("GNU_verneed         ");
+            break;
+            
+        case SHT_GNU_versym:
+            printf("GNU_versym          ");
+            break;
+        
+        //Дублируют по значению SHT_GNU_versym 
+        // case SHT_HISUNW:
+        //     printf("HISUNW\n");
+        //     break;
+
+        // case SHT_HIOS:
+        //     printf("HIOS\n");
+        //     break;
+        
+        case SHT_LOPROC:
+            printf("LOPROC              ");
+            break;
+            
+        case SHT_HIPROC:
+            printf("HIPROC              ");
+            break;
+                        
+        case SHT_LOUSER:
+            printf("LOUSER              ");
+            break;
+            
+        case SHT_HIUSER:
+            printf("LOUSER              ");
+            break;
+
+        default:
+            printf("Не опр.             ");
+            break;
+    }
+}
+
+void print_sh_type_in_detail(int i, Elf64_Shdr *section_headers)
+{
+    switch (section_headers[i].sh_type)
+    {  
+        case SHT_PROGBITS:
+            printf("                            ");
+            printf("Program data\n");
+            break;
+
+        case SHT_SYMTAB:
+            printf("                            ");
+            printf("Symbol table\n");
+            break;
+
+        case SHT_STRTAB:
+            printf("                            ");
+            printf("String table\n");
+            break;
+            
+        case SHT_RELA:
+            printf("                            ");
+            printf("Relocation entries\n");
+            printf("                            ");
+            printf("with addends\n");
+            break;
+            
+        case SHT_HASH:
+            printf("                            ");
+            printf("Symbol hash table\n");
+            break;
+            
+        case SHT_DYNAMIC:
+            printf("                            ");
+            printf("Dynamic linking\n");
+            printf("                            ");
+            printf("information\n");
+            break;
+            
+        case SHT_NOTE:
+            printf("                            ");
+            printf("Notes\n");
+            break;
+            
+        case SHT_NOBITS:
+            printf("                            ");
+            printf("Program space with\n");
+            printf("                            ");
+            printf("no data (bss)\n");
+            break;
+            
+        case SHT_REL:
+            printf("                            ");
+            printf("Relocation entries,\n");
+            printf("                            ");
+            printf("no addends\n");
+            break;
+            
+        case SHT_SHLIB:
+            printf("                            ");
+            printf("Reserved\n");
+            break;
+            
+        case SHT_DYNSYM:
+            printf("                            ");
+            printf("Dynamic linker\n");
+            printf("                            ");
+            printf("symbol table\n");
+            break;
+            
+        case SHT_INIT_ARRAY:
+            printf("                            ");
+            printf("Array of\n");
+            printf("                            ");
+            printf("constructors\n");
+            break;
+            
+        case SHT_FINI_ARRAY:
+            printf("                            ");
+            printf("Array of\n");
+            printf("                            ");
+            printf("destructors\n");
+            break;
+            
+        case SHT_PREINIT_ARRAY:
+            printf("                            ");
+            printf("Array of\n");
+            printf("                            ");
+            printf("pre-constructors\n");
+            break;
+            
+        case SHT_GROUP:
+            printf("                            ");
+            printf("Section group\n");
+            break;
+            
+        case SHT_SYMTAB_SHNDX:
+            printf("                            ");
+            printf("Extended section\n");
+            printf("                            ");
+            printf("indices\n");
+            break;
+            
+        case SHT_NUM:
+            printf("                            ");
+            printf("Number of defined\n");
+            printf("                            ");
+            printf("types\n");
+            break;
+            
+        case SHT_LOOS:
+            printf("                            ");
+            printf("Start OS-specific\n");
+            break;
+            
+        case SHT_GNU_ATTRIBUTES:
+            printf("                            ");
+            printf("Object attributes\n");
+            break;
+            
+        case SHT_GNU_HASH:
+            printf("                            ");
+            printf("GNU-style hash\n");
+            printf("                            ");
+            printf("table\n");
+            break;
+            
+        case SHT_GNU_LIBLIST:
+            printf("                            ");
+            printf("Prelink library\n");
+            printf("                            ");
+            printf("list\n");
+            break;
+            
+        case SHT_CHECKSUM:
+            printf("                            ");
+            printf("Checksum for DSO\n");
+            printf("                            ");
+            printf("content\n");
+            break;
+            
+        case SHT_LOSUNW:
+            printf("                            ");
+            printf("Sun-specific low\n");
+            printf("                            ");
+            printf("bound\n");
+            break;
+
+        case SHT_GNU_verdef:
+            printf("                            ");
+            printf("Version definition\n");
+            printf("                            ");
+            printf("section\n");
+            break;
+            
+        case SHT_GNU_verneed:
+            printf("                            ");
+            printf("Version needs\n");
+            printf("                            ");
+            printf("section\n");
+            break;
+            
+        case SHT_GNU_versym:
+            printf("                            ");
+            printf("Version symbol\n");
+            printf("                            ");
+            printf("table\n");
+            break;
+            
+        case SHT_LOPROC:
+            printf("                            ");
+            printf("Start of\n");
+            printf("                            ");
+            printf("processor-specific\n");
+            break;
+
+        case SHT_HIPROC:
+            printf("                            ");
+            printf("End of\n");
+            printf("                            ");
+            printf("processor-specific\n");
+            break;
+            
+        case SHT_LOUSER:
+            printf("                            ");
+            printf("Start of\n");
+            printf("                            ");
+            printf("application-\n");
+            printf("                            ");
+            printf("specific\n");
+            break;
+            
+        case SHT_HIUSER:
+            printf("                            ");
+            printf("End of\n");
+            printf("                            ");
+            printf("application\n");
+            printf("                            ");
+            printf("specific\n");
+            break;
+
+        default:
+            break;
+    }
+}
+
+void print_sh_flags(int i, Elf64_Shdr *section_headers)
+{
+    if ((section_headers[i].sh_flags & SHF_WRITE) >> 0 == 1) { printf("W"); }
+    if ((section_headers[i].sh_flags & SHF_ALLOC) >> 1 == 1) { printf("A"); }
+    if ((section_headers[i].sh_flags & SHF_EXECINSTR) >> 2 == 1) { printf("X"); }
+    if ((section_headers[i].sh_flags & SHF_MERGE) >> 4 == 1) { printf("M"); }
+    if ((section_headers[i].sh_flags & SHF_STRINGS) >> 5 == 1) { printf("S"); }
+    if ((section_headers[i].sh_flags & SHF_INFO_LINK) >> 6 == 1) { printf("I"); }
+    if ((section_headers[i].sh_flags & SHF_LINK_ORDER) >> 7 == 1) { printf("L"); }
+    if ((section_headers[i].sh_flags & SHF_OS_NONCONFORMING) >> 8 == 1) { printf("O"); }
+    if ((section_headers[i].sh_flags & SHF_GROUP) >> 9 == 1) { printf("G"); }
+    if ((section_headers[i].sh_flags & SHF_TLS) >> 10 == 1) { printf("T"); }
+    if ((section_headers[i].sh_flags & SHF_COMPRESSED) >> 11 == 1) { printf("C"); }
+    if (section_headers[i].sh_flags == SHF_MASKOS) { printf("o"); }
+    if (section_headers[i].sh_flags == SHF_MASKPROC) { printf("p"); }
+    if ((section_headers[i].sh_flags & SHF_GNU_RETAIN) >> 21 == 1) { printf("R"); }
+    //SHF_ORDERED - это более старая версия функциональности, 
+    //предоставляемой SHF_LINK_ORDER, и была заменена SHF_LINK_ORDER. 
+    //SHF_ORDERED больше не поддерживается. 
+    if ((section_headers[i].sh_flags & SHF_ORDERED) >> 30 == 1) { printf("L"); }
+    if (section_headers[i].sh_flags == SHF_EXCLUDE) { printf("E"); }    
+
+    printf("\t");
+}
+
 void read_sections(const char* filename)
 {
     Elf64_Shdr *section_headers; //массив указателей на структуры
@@ -1009,400 +1397,51 @@ void read_sections(const char* filename)
     }
 
     printf("\nЗаголовки разделов:\n");
-    printf("  [Нм]\tИмя                 Тип\t\t\tАдрес      Смещ\tРазм\tES\t"
-           "Флаг\tЛк\tИнф\tAl\n");
+    printf("  [Нм] Имя                  Тип\t\t\tАдрес      Смещ   Разм   ES "
+           "Флг\tЛк Инф Al\n");
 
     fseek(file_pointer, \
           section_headers[section_header_string_table_index].sh_offset, \
           SEEK_SET);
     int size_of_section = section_headers[section_header_string_table_index].sh_size;
     char string_keeper[size_of_section];    
-    fread(string_keeper, 1, size_of_section, file_pointer);
-
-    void print_sh_type(int i)
-    {
-        switch (section_headers[i].sh_type)
-        {
-            case SHT_NULL:
-                printf("NULL                ");
-                break;
-                 
-            case SHT_PROGBITS:
-                printf("PROGBITS            ");
-                break;
-                
-            case SHT_SYMTAB:
-                printf("SYMTAB              ");
-                break;
-                  
-            case SHT_STRTAB:
-                printf("STRTAB              ");
-                break;
-                
-            case SHT_RELA:
-                printf("RELA                ");
-                break;
-                 
-            case SHT_HASH:
-                printf("HASH                ");
-                break;
-                   
-            case SHT_DYNAMIC:
-                printf("DYNAMIC             ");
-                break;
-                
-            case SHT_NOTE:
-                printf("NOTE                ");
-                break;
-                 
-            case SHT_NOBITS:
-                printf("NOBITS              ");
-                break;
-                 
-            case SHT_REL:
-                printf("NOBITS              ");
-                break;
-                
-            case SHT_SHLIB:
-                printf("NOBITS              ");
-                break;
-                
-            case SHT_DYNSYM:
-                printf("DYNSYM              ");
-                break;
-                 
-            case SHT_INIT_ARRAY:
-                printf("INIT_ARRAY          ");
-                break;
-                
-            case SHT_FINI_ARRAY:
-                printf("FINI_ARRAY          ");
-                break;
-                 
-            case SHT_PREINIT_ARRAY:
-                printf("PREINIT_ARRAY       ");
-                break;
-                 
-            case SHT_GROUP:
-                printf("GROUP               ");
-                break;
-                 
-            case SHT_SYMTAB_SHNDX:
-                printf("SYMTAB_SHNDX        ");
-                break;
-                 
-            case SHT_NUM:
-                printf("NUM                 ");
-                break;
-  
-            case SHT_LOOS:
-                printf("LOOS                ");
-                break;
-                  
-            case SHT_GNU_ATTRIBUTES:
-                printf("GNU_ATTRIBUTES      ");
-                break;
-                 
-            case SHT_GNU_HASH:
-                printf("GNU_HASH            ");
-                break;
-                
-            case SHT_GNU_LIBLIST:
-                printf("GNU_LIBLIST         ");
-                break;
-                  
-            case SHT_CHECKSUM:
-                printf("GNU_CHECKSUM        ");
-                break;
-                 
-            case SHT_LOSUNW:
-                printf("LOSUNW              ");
-                break;
-            
-            //Дублирует по значению SHT_LOSUNW
-            // case SHT_SUNW_move:
-            //     printf("SUNW_move\n");
-            //     break;
-            
-            case SHT_SUNW_COMDAT:
-                printf("SUNW_COMDAT         ");
-                break;
-                  
-            case SHT_SUNW_syminfo:
-                printf("SUNW_syminfo        ");
-                break;
-                
-            case SHT_GNU_verdef:
-                printf("GNU_verdef          ");
-                break;
-                
-            case SHT_GNU_verneed:
-                printf("GNU_verneed         ");
-                break;
-                
-            case SHT_GNU_versym:
-                printf("GNU_versym          ");
-                break;
-            
-            //Дублируют по значению SHT_GNU_versym 
-            // case SHT_HISUNW:
-            //     printf("HISUNW\n");
-            //     break;
-
-            // case SHT_HIOS:
-            //     printf("HIOS\n");
-            //     break;
-            
-            case SHT_LOPROC:
-                printf("LOPROC              ");
-                break;
-                
-            case SHT_HIPROC:
-                printf("HIPROC              ");
-                break;
-                           
-            case SHT_LOUSER:
-                printf("LOUSER              ");
-                break;
-                
-            case SHT_HIUSER:
-                printf("LOUSER              ");
-                break;
-
-            default:
-                printf("Не опр.             ");
-                break;
-        }
-    }
-
-    void print_sh_type_in_detail(int i)
-    {
-        switch (section_headers[i].sh_type)
-        {  
-            case SHT_PROGBITS:
-                printf("                            ");
-                printf("Program data\n");
-                break;
-
-            case SHT_SYMTAB:
-                printf("                            ");
-                printf("Symbol table\n");
-                break;
-
-            case SHT_STRTAB:
-                printf("                            ");
-                printf("String table\n");
-                break;
-                
-            case SHT_RELA:
-                printf("                            ");
-                printf("Relocation entries\n");
-                printf("                            ");
-                printf("with addends\n");
-                break;
-                
-            case SHT_HASH:
-                printf("                            ");
-                printf("Symbol hash table\n");
-                break;
-                
-            case SHT_DYNAMIC:
-                printf("                            ");
-                printf("Dynamic linking\n");
-                printf("                            ");
-                printf("information\n");
-                break;
-                
-            case SHT_NOTE:
-                printf("                            ");
-                printf("Notes\n");
-                break;
-                
-            case SHT_NOBITS:
-                printf("                            ");
-                printf("Program space with\n");
-                printf("                            ");
-                printf("no data (bss)\n");
-                break;
-                
-            case SHT_REL:
-                printf("                            ");
-                printf("Relocation entries,\n");
-                printf("                            ");
-                printf("no addends\n");
-                break;
-                
-            case SHT_SHLIB:
-                printf("                            ");
-                printf("Reserved\n");
-                break;
-                
-            case SHT_DYNSYM:
-                printf("                            ");
-                printf("Dynamic linker\n");
-                printf("                            ");
-                printf("symbol table\n");
-                break;
-                
-            case SHT_INIT_ARRAY:
-                printf("                            ");
-                printf("Array of\n");
-                printf("                            ");
-                printf("constructors\n");
-                break;
-                
-            case SHT_FINI_ARRAY:
-                printf("                            ");
-                printf("Array of\n");
-                printf("                            ");
-                printf("destructors\n");
-                break;
-                
-            case SHT_PREINIT_ARRAY:
-                printf("                            ");
-                printf("Array of\n");
-                printf("                            ");
-                printf("pre-constructors\n");
-                break;
-                
-            case SHT_GROUP:
-                printf("                            ");
-                printf("Section group\n");
-                break;
-                
-            case SHT_SYMTAB_SHNDX:
-                printf("                            ");
-                printf("Extended section\n");
-                printf("                            ");
-                printf("indices\n");
-                break;
-                
-            case SHT_NUM:
-                printf("                            ");
-                printf("Number of defined\n");
-                printf("                            ");
-                printf("types\n");
-                break;
-                
-            case SHT_LOOS:
-                printf("                            ");
-                printf("Start OS-specific\n");
-                break;
-                
-            case SHT_GNU_ATTRIBUTES:
-                printf("                            ");
-                printf("Object attributes\n");
-                break;
-                
-            case SHT_GNU_HASH:
-                printf("                            ");
-                printf("GNU-style hash\n");
-                printf("                            ");
-                printf("table\n");
-                break;
-                
-            case SHT_GNU_LIBLIST:
-                printf("                            ");
-                printf("Prelink library\n");
-                printf("                            ");
-                printf("list\n");
-                break;
-                
-            case SHT_CHECKSUM:
-                printf("                            ");
-                printf("Checksum for DSO\n");
-                printf("                            ");
-                printf("content\n");
-                break;
-                
-            case SHT_LOSUNW:
-                printf("                            ");
-                printf("Sun-specific low\n");
-                printf("                            ");
-                printf("bound\n");
-                break;
-
-            case SHT_GNU_verdef:
-                printf("                            ");
-                printf("Version definition\n");
-                printf("                            ");
-                printf("section\n");
-                break;
-                
-            case SHT_GNU_verneed:
-                printf("                            ");
-                printf("Version needs\n");
-                printf("                            ");
-                printf("section\n");
-                break;
-                
-            case SHT_GNU_versym:
-                printf("                            ");
-                printf("Version symbol\n");
-                printf("                            ");
-                printf("table\n");
-                break;
-                
-            case SHT_LOPROC:
-                printf("                            ");
-                printf("Start of\n");
-                printf("                            ");
-                printf("processor-specific\n");
-                break;
-
-            case SHT_HIPROC:
-                printf("                            ");
-                printf("End of\n");
-                printf("                            ");
-                printf("processor-specific\n");
-                break;
-                
-            case SHT_LOUSER:
-                printf("                            ");
-                printf("Start of\n");
-                printf("                            ");
-                printf("application-\n");
-                printf("                            ");
-                printf("specific\n");
-                break;
-                
-            case SHT_HIUSER:
-                printf("                            ");
-                printf("End of\n");
-                printf("                            ");
-                printf("application\n");
-                printf("                            ");
-                printf("specific\n");
-                break;
-
-            default:
-                break;
-        }
-    }
+    fread(string_keeper, 1, size_of_section, file_pointer);   
     
-    printf("-------|-------------------|-------------------|----------|-"
-           "-----------------------------------------------------\n");
+    printf("  ----|--------------------|-------------------|----------|-"
+           "-----|------|--|---|--|---|--\n");
     for (int i = 0; i < number_of_section_headers; i++)
     {
         printf("  [%2d]\t", i);
         printf("%-20s", &string_keeper[section_headers[i].sh_name]);
-        print_sh_type(i);
-        printf("0x%08lx\n", section_headers[i].sh_addr);
+        print_sh_type(i, section_headers);
+        printf("0x%08lx ", section_headers[i].sh_addr);
+        printf("%06lx ", section_headers[i].sh_offset);
+        printf("%06lx ", section_headers[i].sh_size);
+        printf("%02lx ", section_headers[i].sh_entsize);
+        print_sh_flags(i, section_headers);
+        printf("%-2d ", section_headers[i].sh_link);
+        printf("%-2d  ", section_headers[i].sh_info);
+        printf("%ld\n", section_headers[i].sh_addralign);
 
-        print_sh_type_in_detail(i); 
-        printf("-------|-------------------|-------------------|----------|-"
-               "-----------------------------------------------------\n");          
-            //          -------------------|
+        print_sh_type_in_detail(i, section_headers); 
+        printf("  ----|--------------------|-------------------|----------|-"
+               "-----|------|--|---|--|---|--\n");          
+        
     }
+    printf("Обозначения флагов:\n");
+    printf("  W (запись), A (назнач), X (исполняемый), M (слияние), S (строки),\n");
+    printf("  I (инфо), L (порядок ссылок), O (требуется дополнительная работа ОС),\n");
+    printf("  G (группа), T (TLS), C (сжат), o (специфичю для ОС)\n");
+    printf("  R (не исп. GC при компоновке), E (исключен), p (processor specific)\n");
 
     fclose(file_pointer);
 }
 
 int main()
-{    
-    read_header("example");
-
-    read_sections("example");
+{   
+    char filename[] = "example";
+    read_header(filename);
+    read_sections(filename);
 
     return 0;
 }
