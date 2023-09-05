@@ -7,6 +7,10 @@ long start_of_section_headers = 0;
 int number_of_section_headers = 0;
 int section_header_string_table_index = 0;
 
+long start_of_segment_headers = 0;
+int number_of_segment_headers = 0;
+long size_of_segment_headers = 0;
+
 //header
 void read_header(const char* filename)
 {
@@ -174,7 +178,7 @@ void read_header(const char* filename)
     switch (header.e_type)
     {
         case ET_NONE:
-            printf("Неизвестный тип\n");
+            printf("Неизвестный тип\n");            
             break;
 
         case ET_REL:
@@ -952,6 +956,7 @@ void read_header(const char* filename)
     
     printf("  Начало заголовков программы:\t\t%lx (байтов в файле)\n", \
             header.e_phoff);
+    start_of_segment_headers = header.e_phoff;
 
     printf("  Начало заголовков раздела:\t\t%lx (байтов в файле)\n", \
             header.e_shoff);
@@ -963,8 +968,10 @@ void read_header(const char* filename)
 
     printf("  Размер программных заголовков:\t%d (байтов)\n", \
             header.e_phentsize);
+    size_of_segment_headers = header.e_phentsize;
 
     printf("  Число заголовков программ:\t\t%d\n", header.e_phnum);
+    number_of_segment_headers = header.e_phnum;
 
     printf("  Размер заголовков секций:\t\t%d (байтов)\n", header.e_shentsize);
 
@@ -1397,7 +1404,7 @@ void read_sections(const char* filename)
     }
 
     printf("\nЗаголовки разделов:\n");
-    printf("  [Нм] Имя                  Тип\t\t\tАдрес      Смещ   Разм   ES "
+    printf("  [Нм] Имя                  Тип\t\t\tАдрес      Смещ   Размер ES "
            "Флг\tЛк Инф Al\n");
 
     fseek(file_pointer, \
@@ -1431,10 +1438,174 @@ void read_sections(const char* filename)
     printf("Обозначения флагов:\n");
     printf("  W (запись), A (назнач), X (исполняемый), M (слияние), S (строки),\n");
     printf("  I (инфо), L (порядок ссылок), O (требуется дополнительная работа ОС),\n");
-    printf("  G (группа), T (TLS), C (сжат), o (специфичю для ОС)\n");
-    printf("  R (не исп. GC при компоновке), E (исключен), p (processor specific)\n");
+    printf("  G (группа), T (TLS), C (сжат), o (специфич. для ОС)\n");
+    printf("  R (не исп. GC при компоновке), E (исключен), p (processor specific)\n\n");
 
     fclose(file_pointer);
+}
+
+void read_segments(const char* filename)
+{
+    FILE* file_pointer;
+    Elf64_Ehdr header;      
+
+    file_pointer = fopen(filename, "r"); 
+    fread(&header, sizeof(Elf64_Ehdr), 1, file_pointer); 
+
+    printf("Тип файла ELF - ");
+    switch (header.e_type)
+    {
+        case ET_NONE:
+            printf("Неизвестный тип\n");            
+            break;
+
+        case ET_REL:
+            printf("Перемещаемый файл\n");
+            break;
+
+        case ET_EXEC:
+            printf("Исполняемый файл\n");
+            break;
+
+        case ET_DYN:
+            printf("Совместно используемый объектный файл\n");
+            break;
+
+        case ET_CORE:
+            printf("Файл типа core\n");
+            break;
+
+        // case ET_NUM:
+        //     printf("Number of defined types\n");
+        //     break;
+
+        case ET_LOOS:
+            printf("Зависимые от операционной системы значения (start)\n");
+            break;
+
+        case ET_HIOS:
+            printf("Зависимые от операционной системы значения (end)\n");
+            break;
+
+        case ET_LOPROC:
+            printf("Зависимые от процессора значения (start)\n");
+            break;
+
+        case ET_HIPROC:
+            printf("Зависимые от процессора значения (end)\n");
+            break;
+        
+        default:
+            perror("Не удалось определить тип ELF-файла");
+            break;
+    }
+    printf("Точка входа 0x%lx\n", header.e_entry);
+    printf("Имеется %d заголовков программы, начиная со смещения %ld\n\n", \
+    number_of_segment_headers, start_of_segment_headers);   
+    printf("Заголовки программы:\n");
+    printf("  Тип           Смещ.    Вирт.адр Физ.адр Рзм.фйл Рзм.пм Флг Выравн\n");
+
+    fseek(file_pointer, start_of_segment_headers, SEEK_SET); 
+    
+    Elf64_Phdr segment_headers[number_of_segment_headers]; 
+
+    for (int i = 0; i < number_of_segment_headers; i++)
+    {
+        fread(&segment_headers[i], sizeof(Elf64_Phdr), 1, file_pointer);
+
+        switch (segment_headers[i].p_type) 
+        {
+            case PT_NULL:
+                printf("  NULL\t\t");
+                break;
+            
+            case PT_LOAD:
+                printf("  LOAD\t\t");
+                break;
+
+            case PT_DYNAMIC:
+                printf("  DYNAMIC\t");
+                break;
+
+            case PT_INTERP:
+                printf("  INTERP\t");
+                break;
+
+            case PT_NOTE:
+                printf("  NOTE\t\t");
+                break;
+
+            case PT_SHLIB:
+                printf("  SHLIB\t");
+                break;
+            
+            case PT_PHDR:
+                printf("  PHDR\t\t");
+                break;
+
+            case PT_TLS:
+                printf("  TLS\t\t");
+                break;
+
+            case PT_NUM:
+                printf("  NUM\t\t");
+                break;
+
+            case PT_LOOS:
+                printf("  LOOS\t\t");
+                break;
+
+            case PT_GNU_EH_FRAME:
+                printf("  GNU_EH_FRAME\t");
+                break;
+
+            case PT_GNU_STACK:
+                printf("  GNU_STACK\t");
+                break;
+
+            case PT_GNU_RELRO:
+                printf("  GNU_RELRO\t");
+                break;
+
+            case PT_GNU_PROPERTY:
+                printf("  GNU_PROPERTY\t");
+                break;
+
+            case PT_LOSUNW:
+                printf("  LOSUNW\t");
+                break;
+
+            // case PT_SUNWBSS:
+            //     printf("  SUNWBSS\t");
+            //     break;
+
+            case PT_SUNWSTACK:
+                printf("  SUNWSTACK\t");
+                break;
+
+            case PT_HISUNW:
+                printf("  HISUNW\t");
+                break;
+
+            // case PT_HIOS:
+            //     printf("  HIOS\t\t");
+            //     break;
+
+            case PT_LOPROC:
+                printf("  LOPROC\t");
+                break;
+
+            case PT_HIPROC:
+                printf("  HIPROC\t");
+                break;
+
+            default:
+                break;
+        }    
+
+        printf("%08lx ", segment_headers[i].p_offset);
+    }    
+    
 }
 
 int main()
@@ -1442,6 +1613,7 @@ int main()
     char filename[] = "example";
     read_header(filename);
     read_sections(filename);
+    read_segments(filename);
 
     return 0;
 }
