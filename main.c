@@ -171,7 +171,6 @@ void read_header(const char* filename)
     }
 
     printf("  Версия ABI:\t\t\t\t%d\n", header.e_ident[EI_ABIVERSION]);
-
     printf("  Начало заполнителя:\t\t\t%d\n", header.e_ident[EI_PAD]);
 
     printf("  Тип объектного файла:\t\t\t");
@@ -950,10 +949,9 @@ void read_header(const char* filename)
             break;
     }
 
-    printf("  Версия:\t\t\t\t0x%x\n", header.e_version);
-    
-    printf("  Адрес точки входа:\t\t\t0x%lx\n", header.e_entry);
-    
+    printf("  Версия:\t\t\t\t0x%x\n", header.e_version);    
+    printf("  Адрес точки входа:\t\t\t0x%lx\n", header.e_entry);  
+
     printf("  Начало заголовков программы:\t\t%lx (байтов в файле)\n", \
             header.e_phoff);
     start_of_segment_headers = header.e_phoff;
@@ -963,7 +961,6 @@ void read_header(const char* filename)
     start_of_section_headers = header.e_shoff;
 
     printf("  Флаги:\t\t\t\t0x%x\n", header.e_flags);
-
     printf("  Размер заголовка ELF-файла:\t\t%d (байтов)\n", header.e_ehsize);
 
     printf("  Размер программных заголовков:\t%d (байтов)\n", \
@@ -1444,6 +1441,21 @@ void read_sections(const char* filename)
     fclose(file_pointer);
 }
 
+void print_p_flags(int i, Elf64_Phdr *segment_headers)
+{
+    if ((segment_headers[i].p_flags & PF_R) >> 1 == 2) { printf("R"); }
+    else { printf(" "); }
+    if ((segment_headers[i].p_flags & PF_W) >> 1 == 1) { printf("W"); }
+    else { printf(" "); }
+    if ((segment_headers[i].p_flags & PF_X) >> 0 == 1) { printf("E"); }
+    else { printf(" "); }   
+
+    if (segment_headers[i].p_flags == PF_MASKOS) { printf("OS-sp"); }
+    if (segment_headers[i].p_flags == PF_MASKPROC) { printf("Proc-sp"); }
+
+    printf("\t");
+}
+
 void read_segments(const char* filename)
 {
     FILE* file_pointer;
@@ -1503,7 +1515,8 @@ void read_segments(const char* filename)
     printf("Имеется %d заголовков программы, начиная со смещения %ld\n\n", \
     number_of_segment_headers, start_of_segment_headers);   
     printf("Заголовки программы:\n");
-    printf("  Тип           Смещ.    Вирт.адр Физ.адр Рзм.фйл Рзм.пм Флг Выравн\n");
+    printf("  Тип           Смещ.    Вирт.адр           Физ.адр " 
+    "           Рзм.фйл  Рзм.пм   Флг    Выравн\n");
 
     fseek(file_pointer, start_of_segment_headers, SEEK_SET); 
     
@@ -1601,16 +1614,48 @@ void read_segments(const char* filename)
 
             default:
                 break;
-        }    
-
-        printf("%08lx ", segment_headers[i].p_offset);
+        }   
+        printf("0x%06lx ", segment_headers[i].p_offset);
+        printf("0x%016lx ", segment_headers[i].p_vaddr);
+        printf("0x%016lx ", segment_headers[i].p_paddr);
+        printf("0x%06lx ", segment_headers[i].p_filesz);
+        printf("0x%06lx ", segment_headers[i].p_memsz);
+        print_p_flags(i, segment_headers);
+        printf("0x%lx \n", segment_headers[i].p_align);
     }    
-    
+
+    printf("\nСоответствие раздел-сегмент:\n  Сегмент Разделы...\n"); 
+
+    Elf64_Shdr section_headers[number_of_section_headers]; 
+    fseek(file_pointer, start_of_section_headers, SEEK_SET);
+    fread(section_headers, sizeof(Elf64_Shdr), number_of_section_headers, \
+          file_pointer);
+    fseek(file_pointer, \
+          section_headers[section_header_string_table_index].sh_offset, \
+          SEEK_SET);
+    int size_of_section = section_headers[section_header_string_table_index].sh_size;
+    char string_keeper[size_of_section];    
+    fread(string_keeper, 1, size_of_section, file_pointer);   
+
+    for (int i = 0; i < number_of_segment_headers; i++)
+    {
+        printf("   %02d\t", i);
+        for (int j = 0; j < number_of_section_headers; j++)
+        {
+            if (section_headers[j].sh_offset >= segment_headers[i].p_offset 
+            && section_headers[j].sh_offset < segment_headers[i].p_offset 
+            + segment_headers[i].p_filesz) 
+            {      
+                printf("%s ", &string_keeper[section_headers[j].sh_name]);
+            }            
+        }        
+        printf("\n");
+    }    
 }
 
 int main()
 {   
-    char filename[] = "example";
+    char filename[] = "example_dynamic";
     read_header(filename);
     read_sections(filename);
     read_segments(filename);
