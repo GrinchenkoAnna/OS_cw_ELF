@@ -11,6 +11,9 @@ long start_of_segment_headers = 0;
 int number_of_segment_headers = 0;
 long size_of_segment_headers = 0;
 
+long dynamic_offset = 0;
+long dynamic_size = 0;
+
 //header
 void read_header(const char* filename)
 {
@@ -1014,6 +1017,8 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
                 
         case SHT_DYNAMIC:
             printf("DYNAMIC             ");
+            dynamic_offset = section_headers[i].sh_offset;
+            dynamic_size = section_headers[i].sh_size;
             break;
             
         case SHT_NOTE:
@@ -1175,7 +1180,7 @@ void print_sh_type_in_detail(int i, Elf64_Shdr *section_headers)
             printf("                            ");
             printf("Dynamic linking\n");
             printf("                            ");
-            printf("information\n");
+            printf("information\n");            
             break;
             
         case SHT_NOTE:
@@ -1415,7 +1420,7 @@ void read_sections(const char* filename)
            "-----|------|--|---|--|---|--\n");
     for (int i = 0; i < number_of_section_headers; i++)
     {
-        printf("  [%2d]\t", i);
+        printf("  [%2d]\t", i);        
         printf("%-20s", &string_keeper[section_headers[i].sh_name]);
         print_sh_type(i, section_headers);
         printf("0x%08lx ", section_headers[i].sh_addr);
@@ -1525,7 +1530,6 @@ void read_segments(const char* filename)
     for (int i = 0; i < number_of_segment_headers; i++)
     {
         fread(&segment_headers[i], sizeof(Elf64_Phdr), 1, file_pointer);
-
         switch (segment_headers[i].p_type) 
         {
             case PT_NULL:
@@ -1647,18 +1651,64 @@ void read_segments(const char* filename)
             + segment_headers[i].p_filesz) 
             {      
                 printf("%s ", &string_keeper[section_headers[j].sh_name]);
+                //.bss не выводится
             }            
         }        
         printf("\n");
     }    
+    printf("\n");
+    fclose(file_pointer);
+}
+
+void read_section_dynamic(const char* filename) //не считает кол-во записей
+{
+    FILE* file_pointer;
+    Elf64_Dyn dynamic;
+
+    file_pointer = fopen(filename, "r"); 
+    fseek(file_pointer, dynamic_offset, SEEK_SET);
+    fread(&dynamic, sizeof(Elf64_Dyn), 1, file_pointer);    
+    
+    int count = 1;
+    long offset = dynamic_offset;
+    long block_size = sizeof(dynamic.d_tag) + sizeof(dynamic.d_un.d_ptr) + \
+        sizeof(dynamic.d_un.d_val);
+    long section_size = block_size;
+    while (section_size <= dynamic_size)
+    {
+        fseek(file_pointer, offset, SEEK_SET);
+        fread(&dynamic, sizeof(Elf64_Dyn), 1, file_pointer);
+        block_size = sizeof(dynamic.d_tag) + sizeof(dynamic.d_un.d_ptr) + \
+        sizeof(dynamic.d_un.d_val);
+        section_size += block_size;        
+        count++;
+    }
+
+    Elf64_Dyn dynamic_arr[count];
+    fseek(file_pointer, dynamic_offset, SEEK_SET);   
+    
+    printf("Динамический раздел .dynamic со смещением 0x%lx "
+    "содержит %d элементов:\n", dynamic_offset, count);
+    
+    for (int i = 0; i < count; i++)
+    {
+        fread(&dynamic_arr[i], sizeof(Elf64_Dyn), 1, file_pointer);
+        printf("Tag: 0x%016lx\n", dynamic_arr[i].d_tag);
+        // printf("Val: (%lx)\n", dynamic_arr[i].d_un.d_val);
+        // printf("Ptr: %lx\n", dynamic_arr[i].d_un.d_ptr);
+    }    
+
+    fclose(file_pointer);
 }
 
 int main()
 {   
-    char filename[] = "example_dynamic";
+    char filename[] = "example";
     read_header(filename);
     read_sections(filename);
     read_segments(filename);
+
+    read_section_dynamic(filename);
 
     return 0;
 }
