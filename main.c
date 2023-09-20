@@ -1353,25 +1353,26 @@ void print_sh_type_in_detail(int i, Elf64_Shdr *section_headers)
 
 void print_sh_flags(int i, Elf64_Shdr *section_headers)
 {
-    if ((section_headers[i].sh_flags & SHF_WRITE) >> 0 == 1) { printf("W"); }
-    if ((section_headers[i].sh_flags & SHF_ALLOC) >> 1 == 1) { printf("A"); }
-    if ((section_headers[i].sh_flags & SHF_EXECINSTR) >> 2 == 1) { printf("X"); }
-    if ((section_headers[i].sh_flags & SHF_MERGE) >> 4 == 1) { printf("M"); }
-    if ((section_headers[i].sh_flags & SHF_STRINGS) >> 5 == 1) { printf("S"); }
-    if ((section_headers[i].sh_flags & SHF_INFO_LINK) >> 6 == 1) { printf("I"); }
-    if ((section_headers[i].sh_flags & SHF_LINK_ORDER) >> 7 == 1) { printf("L"); }
-    if ((section_headers[i].sh_flags & SHF_OS_NONCONFORMING) >> 8 == 1) { printf("O"); }
-    if ((section_headers[i].sh_flags & SHF_GROUP) >> 9 == 1) { printf("G"); }
-    if ((section_headers[i].sh_flags & SHF_TLS) >> 10 == 1) { printf("T"); }
-    if ((section_headers[i].sh_flags & SHF_COMPRESSED) >> 11 == 1) { printf("C"); }
-    if (section_headers[i].sh_flags == SHF_MASKOS) { printf("o"); }
-    if (section_headers[i].sh_flags == SHF_MASKPROC) { printf("p"); }
-    if ((section_headers[i].sh_flags & SHF_GNU_RETAIN) >> 21 == 1) { printf("R"); }
+    Elf64_Xword sh_flags = section_headers[i].sh_flags;
+    if ((sh_flags & SHF_WRITE) >> 0 == 1) { printf("W"); }
+    if ((sh_flags & SHF_ALLOC) >> 1 == 1) { printf("A"); }
+    if ((sh_flags & SHF_EXECINSTR) >> 2 == 1) { printf("X"); }
+    if ((sh_flags & SHF_MERGE) >> 4 == 1) { printf("M"); }
+    if ((sh_flags & SHF_STRINGS) >> 5 == 1) { printf("S"); }
+    if ((sh_flags & SHF_INFO_LINK) >> 6 == 1) { printf("I"); }
+    if ((sh_flags & SHF_LINK_ORDER) >> 7 == 1) { printf("L"); }
+    if ((sh_flags & SHF_OS_NONCONFORMING) >> 8 == 1) { printf("O"); }
+    if ((sh_flags & SHF_GROUP) >> 9 == 1) { printf("G"); }
+    if ((sh_flags & SHF_TLS) >> 10 == 1) { printf("T"); }
+    if ((sh_flags & SHF_COMPRESSED) >> 11 == 1) { printf("C"); }
+    if (sh_flags == SHF_MASKOS) { printf("o"); }
+    if (sh_flags == SHF_MASKPROC) { printf("p"); }
+    if ((sh_flags & SHF_GNU_RETAIN) >> 21 == 1) { printf("R"); }
     //SHF_ORDERED - это более старая версия функциональности, 
     //предоставляемой SHF_LINK_ORDER, и была заменена SHF_LINK_ORDER. 
     //SHF_ORDERED больше не поддерживается. 
-    if ((section_headers[i].sh_flags & SHF_ORDERED) >> 30 == 1) { printf("L"); }
-    if (section_headers[i].sh_flags == SHF_EXCLUDE) { printf("E"); }    
+    if ((sh_flags & SHF_ORDERED) >> 30 == 1) { printf("L"); }
+    if (sh_flags == SHF_EXCLUDE) { printf("E"); }    
 
     printf("\t");
 }
@@ -1449,15 +1450,16 @@ void read_sections(const char* filename)
 
 void print_p_flags(int i, Elf64_Phdr *segment_headers)
 {
-    if ((segment_headers[i].p_flags & PF_R) >> 1 == 2) { printf("R"); }
+    Elf64_Xword p_flags = segment_headers[i].p_flags;
+    if ((p_flags & PF_R) >> 1 == 2) { printf("R"); }
     else { printf(" "); }
-    if ((segment_headers[i].p_flags & PF_W) >> 1 == 1) { printf("W"); }
+    if ((p_flags & PF_W) >> 1 == 1) { printf("W"); }
     else { printf(" "); }
-    if ((segment_headers[i].p_flags & PF_X) >> 0 == 1) { printf("E"); }
+    if ((p_flags & PF_X) >> 0 == 1) { printf("E"); }
     else { printf(" "); }   
 
-    if (segment_headers[i].p_flags == PF_MASKOS) { printf("OS-sp"); }
-    if (segment_headers[i].p_flags == PF_MASKPROC) { printf("Proc-sp"); }
+    if (p_flags == PF_MASKOS) { printf("OS-sp"); }
+    if (p_flags == PF_MASKPROC) { printf("Proc-sp"); }
 
     printf("\t");
 }
@@ -2064,104 +2066,38 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements)
         // 4
         case DT_FLAGS_1:
             printf("(FLAGS_1)\t\tФлаги: ");
-            switch (dynamic_arr[i].d_un.d_val)
-            {
-                case DF_1_NOW:
-                    printf("NOW "); break;
-
-                case DF_1_GLOBAL:
-                    printf("GLOBAL "); break;
-
-                case DF_1_GROUP:
-                    printf("GROUP "); break;
-
-                case DF_1_NODELETE:
-                    printf("NODELETE "); break;
-
-                case DF_1_LOADFLTR:
-                    printf("LOADFLTR "); break;
-
-                case DF_1_INITFIRST:
-                    printf("INITFIRST "); break;
-
-                case DF_1_NOOPEN:
-                    printf("NOOPEN "); break;
-
-                case DF_1_ORIGIN:
-                    printf("ORIGIN "); break;
-
-                case DF_1_DIRECT:
-                    printf("DIRECT "); break;
-
-                case DF_1_TRANS:
-                    printf("TRANS "); break;
-
-                case DF_1_INTERPOSE:
-                    printf("INTERPOSE "); break;
-
-                case DF_1_NODEFLIB:
-                    printf("NODEFLIB "); break;
-
-                case DF_1_NODUMP:
-                    printf("NODUMP "); break;
-
-                case DF_1_CONFALT:
-                    printf("CONFALT "); break;
-
-                case DF_1_ENDFILTEE:
-                    printf("ENDFILTEE "); break;
-
-                case DF_1_DISPRELDNE:
-                    printf("DISPRELDNE "); break;
-
-                case DF_1_DISPRELPND:
-                    printf("DISPRELPND "); break;
-
-                case DF_1_NODIRECT:
-                    printf("NODIRECT "); break;
-
-                case DF_1_IGNMULDEF:
-                    printf("IGNMULDEF "); break;
-
-                case DF_1_NOKSYMS:
-                    printf("NOKSYMS "); break;
-
-                case DF_1_NOHDR:
-                    printf("NOHDR "); break;
-
-                case DF_1_EDITED:
-                    printf("EDITED "); break;
-
-                case DF_1_NORELOC:
-                    printf("NORELOC "); break;
-
-                case DF_1_SYMINTPOSE:
-                    printf("SYMINTPOSE "); break;
-
-                case DF_1_GLOBAUDIT:
-                    printf("GLOBAUDIT "); break;
-
-                case DF_1_SINGLETON:
-                    printf("GLOBAUDIT "); break;
-
-                case DF_1_STUB:
-                    printf("STUB "); break;
-
-                case DF_1_PIE:
-                    printf("PIE "); break;
-
-                case DF_1_KMOD:
-                    printf("KMOD "); break;
-
-                case DF_1_WEAKFILTER:
-                    printf("WEAKFILTER "); break;
-
-                case DF_1_NOCOMMON:
-                    printf("NOCOMMON "); break;
-
-                default:
-                    printf("Не опр.");
-            }
+            Elf64_Xword d_val = dynamic_arr[i].d_un.d_val;
+            if ((d_val & DF_1_NOW) == DF_1_NOW) { printf("NOW "); }
+            if ((d_val & DF_1_GLOBAL) == DF_1_GLOBAL) { printf("GLOBAL "); }
+            if ((d_val & DF_1_GROUP) == DF_1_GROUP) { printf("GROUP "); }
+            if ((d_val & DF_1_NODELETE) == DF_1_NODELETE) { printf("NODELETE "); }
+            if ((d_val & DF_1_LOADFLTR) == DF_1_LOADFLTR) { printf("LOADFLTR "); }
+            if ((d_val & DF_1_INITFIRST) == DF_1_INITFIRST) { printf("INITFIRST "); }
+            if ((d_val & DF_1_NOOPEN) == DF_1_NOOPEN) { printf("NOOPEN "); }
+            if ((d_val & DF_1_ORIGIN) == DF_1_ORIGIN) { printf("ORIGIN "); }
+            if ((d_val & DF_1_DIRECT) == DF_1_DIRECT) { printf("DIRECT "); }
+            if ((d_val & DF_1_TRANS) == DF_1_TRANS) { printf("TRANS "); }
+            if ((d_val & DF_1_INTERPOSE) == DF_1_INTERPOSE) { printf("INTERPOSE "); }
+            if ((d_val & DF_1_NODEFLIB) == DF_1_NODEFLIB) { printf("NODEFLIB "); }
+            if ((d_val & DF_1_NODUMP) == DF_1_NODUMP) { printf("NODUMP "); }
+            if ((d_val & DF_1_CONFALT) == DF_1_CONFALT) { printf("CONFALT "); }
+            if ((d_val & DF_1_ENDFILTEE) == DF_1_ENDFILTEE) { printf("ENDFILTEE "); }
+            if ((d_val & DF_1_DISPRELDNE) == DF_1_DISPRELDNE) { printf("DISPRELDNE "); }
+            if ((d_val & DF_1_DISPRELPND) == DF_1_DISPRELPND) { printf("DISPRELPND "); }
+            if ((d_val & DF_1_NODIRECT) == DF_1_NODIRECT) { printf("NODIRECT "); }
+            if ((d_val & DF_1_IGNMULDEF) == DF_1_IGNMULDEF) { printf("IGNMULDEF "); }
+            if ((d_val & DF_1_NOKSYMS) == DF_1_NOKSYMS) { printf("NOKSYMS "); }
+            if ((d_val & DF_1_NOHDR) == DF_1_NOHDR) { printf("NOHDR "); }
+            if ((d_val & DF_1_EDITED) == DF_1_EDITED) { printf("EDITED "); }
+            if ((d_val & DF_1_NORELOC) == DF_1_NORELOC) { printf("NORELOC "); }
+            if ((d_val & DF_1_SYMINTPOSE) == DF_1_SYMINTPOSE) { printf("SYMINTPOSE "); }
+            if ((d_val & DF_1_GLOBAUDIT) == DF_1_GLOBAUDIT) { printf("GLOBAUDIT "); }
+            if ((d_val & DF_1_SINGLETON) == DF_1_SINGLETON) { printf("SINGLETON "); }
+            if ((d_val & DF_1_STUB) == DF_1_STUB) { printf("STUB "); }
+            if ((d_val & DF_1_PIE) == DF_1_PIE) { printf("PIE "); }  
+            if ((d_val & DF_1_KMOD) == DF_1_KMOD) { printf("KMOD "); }
+            if ((d_val & DF_1_WEAKFILTER) == DF_1_WEAKFILTER) { printf("WEAKFILTER "); }
+            if ((d_val & DF_1_NOCOMMON) == DF_1_NOCOMMON) { printf("NOCOMMON "); }
             break;
 
         case DT_VERDEF:
