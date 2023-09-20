@@ -1661,96 +1661,135 @@ void read_segments(const char* filename)
     fclose(file_pointer);
 }
 
-void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
+void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements)
 {
+
     switch (dynamic_arr[i].d_tag)
     {
         case DT_NULL:
             printf("(NULL)");
+            printf("\t\t0x0");
             break;
 
         case DT_NEEDED:
             printf("(NEEDED)");
+            //??
             break;
 
         case DT_PLTRELSZ:
             printf("(PLTRELSZ)");
+            printf("\t\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_PLTGOT:
             printf("(PLTGOT)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_HASH:
             printf("(HASH)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_STRTAB:
             printf("(STRTAB)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_SYMTAB:
             printf("(SYMTAB)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_RELA:
             printf("(RELA)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
         
         case DT_RELASZ:
             printf("(RELASZ)");
+            printf("\t\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_RELAENT:
             printf("(RELAENT)");
+            printf("\t\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
             
         case DT_STRSZ:
             printf("(STRSZ)");
+            printf("\t\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_SYMENT:
             printf("(SYMENT)");
+            printf("\t\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_INIT:
             printf("(INIT)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_FINI:
             printf("(FINI)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_SONAME:
             printf("(SONAME)");
+            printf("\t\t%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_RPATH:
             printf("(RPATH)");
+            printf("\t\t%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_SYMBOLIC:
             printf("(SYMBOLIC)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_val);            
             break;
 
         case DT_REL:
             printf("(REL)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_RELSZ:
             printf("(RELSZ)");
+            printf("\t\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_RELENT:
             printf("(RELENT)");
+            printf("\t\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_PLTREL:
             printf("(PLTREL)");
+            for (int j = 0; j < number_of_elements; j++)
+            {
+                if (dynamic_arr[j].d_tag == dynamic_arr[i].d_un.d_val)
+                {
+                    switch (dynamic_arr[j].d_tag)
+                    {
+                        case DT_REL:
+                            printf("\t\tREL"); break;
+
+                        case DT_RELA:
+                            printf("\t\tRELA"); break;
+
+                        default:
+                            printf("\t\tOther"); break;
+                    }
+                }
+            }
             break;
 
         case DT_DEBUG:
             printf("(DEBUG)");
+            printf("\t\t0x%01lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_TEXTREL:
@@ -1759,6 +1798,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_JMPREL:
             printf("(JMPREL)");
+            printf("\t\t0x%03lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_BIND_NOW:
@@ -1767,18 +1807,22 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_INIT_ARRAY:
             printf("(INIT_ARRAY)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_FINI_ARRAY:
             printf("(FINI_ARRAY)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_INIT_ARRAYSZ:
             printf("(INIT_ARRAYSZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_FINI_ARRAYSZ:
             printf("(FINI_ARRAYSZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_RUNPATH:
@@ -1787,10 +1831,36 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_FLAGS:
             printf("(FLAGS)");
+            switch (dynamic_arr[i].d_un.d_val)
+            {
+                case DF_ORIGIN:
+                    printf("\t\tORIGIN");
+                    break;
+                
+                case DF_SYMBOLIC:
+                    printf("\t\tSYMBOLIC");
+                    break;
+
+                case DF_TEXTREL:
+                    printf("\t\tTEXTREL");
+                    break;
+
+                case DF_BIND_NOW:
+                    printf("\t\tBIND_NOW");
+                    break;
+
+                case DF_STATIC_TLS:
+                    printf("\t\tSTATIC_TLS");
+                    break;
+
+                default:
+                    printf("\t\tНе опр.");
+            }
             break;
 
         case DT_ENCODING:
-            printf("(FLAGS)");
+            printf("(ENCODING)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         // case DT_PREINIT_ARRAY:
@@ -1799,34 +1869,42 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_PREINIT_ARRAYSZ:
             printf("(PREINIT_ARRAYSZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
         
         case DT_SYMTAB_SHNDX:
             printf("(SYMTAB_SHNDX)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_NUM:
             printf("(NUM)");
+            printf("\t%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_LOOS:
             printf("(LOOS)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_HIOS:
             printf("(HIOS)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_LOPROC:
             printf("(LOPROC)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_HIPROC:
             printf("(HIPROC)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_PROCNUM:
             printf("(PROCNUM)");
+            printf("\t\t0x%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         // 1
@@ -1840,26 +1918,32 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_GNU_CONFLICTSZ:
             printf("(GNU_CONFLICTSZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_GNU_LIBLISTSZ:
             printf("(GNU_LIBLISTSZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_CHECKSUM:
             printf("(CHECKSUM)");
+            printf("\t%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_PLTPADSZ:
             printf("(PLTPADSZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_MOVEENT:
             printf("(MOVEENT)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_MOVESZ:
             printf("(MOVESZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_FEATURE_1:
@@ -1872,10 +1956,12 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_SYMINSZ:
             printf("(SYMINSZ)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_SYMINENT:
             printf("(SYMINENT)");
+            printf("\t%ld (байт)", dynamic_arr[i].d_un.d_val);
             break;
 
         // case DT_VALRNGHI:
@@ -1897,6 +1983,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_GNU_HASH:
             printf("(GNU_HASH)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_TLSDESC_PLT:
@@ -1909,6 +1996,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_GNU_CONFLICT:
             printf("(GNU_CONFLICT)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_GNU_LIBLIST:
@@ -1917,26 +2005,32 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
 
         case DT_CONFIG:
             printf("(CONFIG)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
         
         case DT_DEPAUDIT:
             printf("(DEPAUDIT)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_AUDIT:
             printf("(AUDIT)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_PLTPAD:
             printf("(PLTPAD)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_MOVETAB:
             printf("(MOVETAB)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_SYMINFO:
             printf("(SYMINFO)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         // case DT_ADDRRNGHI:
@@ -1954,35 +2048,140 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
         // 3
         case DT_VERSYM:
             printf("(VERSYM)");
+            printf("\t\t0x%03lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_RELACOUNT:
             printf("(RELACOUNT)");
+            printf("\t\t%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_RELCOUNT:
             printf("(RELCOUNT)");
+            printf("\t%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         // 4
         case DT_FLAGS_1:
-            printf("(FLAGS_1)");
+            printf("(FLAGS_1)\t\tФлаги: ");
+            switch (dynamic_arr[i].d_un.d_val)
+            {
+                case DF_1_NOW:
+                    printf("NOW "); break;
+
+                case DF_1_GLOBAL:
+                    printf("GLOBAL "); break;
+
+                case DF_1_GROUP:
+                    printf("GROUP "); break;
+
+                case DF_1_NODELETE:
+                    printf("NODELETE "); break;
+
+                case DF_1_LOADFLTR:
+                    printf("LOADFLTR "); break;
+
+                case DF_1_INITFIRST:
+                    printf("INITFIRST "); break;
+
+                case DF_1_NOOPEN:
+                    printf("NOOPEN "); break;
+
+                case DF_1_ORIGIN:
+                    printf("ORIGIN "); break;
+
+                case DF_1_DIRECT:
+                    printf("DIRECT "); break;
+
+                case DF_1_TRANS:
+                    printf("TRANS "); break;
+
+                case DF_1_INTERPOSE:
+                    printf("INTERPOSE "); break;
+
+                case DF_1_NODEFLIB:
+                    printf("NODEFLIB "); break;
+
+                case DF_1_NODUMP:
+                    printf("NODUMP "); break;
+
+                case DF_1_CONFALT:
+                    printf("CONFALT "); break;
+
+                case DF_1_ENDFILTEE:
+                    printf("ENDFILTEE "); break;
+
+                case DF_1_DISPRELDNE:
+                    printf("DISPRELDNE "); break;
+
+                case DF_1_DISPRELPND:
+                    printf("DISPRELPND "); break;
+
+                case DF_1_NODIRECT:
+                    printf("NODIRECT "); break;
+
+                case DF_1_IGNMULDEF:
+                    printf("IGNMULDEF "); break;
+
+                case DF_1_NOKSYMS:
+                    printf("NOKSYMS "); break;
+
+                case DF_1_NOHDR:
+                    printf("NOHDR "); break;
+
+                case DF_1_EDITED:
+                    printf("EDITED "); break;
+
+                case DF_1_NORELOC:
+                    printf("NORELOC "); break;
+
+                case DF_1_SYMINTPOSE:
+                    printf("SYMINTPOSE "); break;
+
+                case DF_1_GLOBAUDIT:
+                    printf("GLOBAUDIT "); break;
+
+                case DF_1_SINGLETON:
+                    printf("GLOBAUDIT "); break;
+
+                case DF_1_STUB:
+                    printf("STUB "); break;
+
+                case DF_1_PIE:
+                    printf("PIE "); break;
+
+                case DF_1_KMOD:
+                    printf("KMOD "); break;
+
+                case DF_1_WEAKFILTER:
+                    printf("WEAKFILTER "); break;
+
+                case DF_1_NOCOMMON:
+                    printf("NOCOMMON "); break;
+
+                default:
+                    printf("Не опр.");
+            }
             break;
 
         case DT_VERDEF:
             printf("(VERDEF)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_VERDEFNUM:
             printf("(VERDEFNUM)");
+            printf("\t\t0x%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_VERNEED:
             printf("(VERNEED)");
+            printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
             break;
 
         case DT_VERNEEDNUM:
             printf("(VERNEEDNUM)");
+            printf("\t\t%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         // case DT_VERSIONTAGIDX(tag): //(DT_ADDRRNGHI - (tag))
@@ -1996,6 +2195,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr)
         // 5
         case DT_AUXILIARY:
             printf("(AUXILIARY)");
+            printf("\t\t0x%ld", dynamic_arr[i].d_un.d_val);
             break;
 
         // case DT_FILTER:
@@ -2046,13 +2246,14 @@ void read_section_dynamic(const char* filename) //не считает кол-в�
     
     for (int i = 0; i < count; i++)
     {
-        fread(&dynamic_arr[i], sizeof(Elf64_Dyn), 1, file_pointer);
+        fread(&dynamic_arr[i], sizeof(Elf64_Dyn), 1, file_pointer);        
+    }  
+    for (int i = 0; i < count; i++)
+    {        
         printf("0x%016lx ", dynamic_arr[i].d_tag);
-        print_d_tag(i, dynamic_arr);
+        print_d_tag(i, dynamic_arr, count);
         printf("\n");
-        //printf("(%lx)\n", dynamic_arr[i].d_un.d_val);
-        // printf("Ptr: %lx\n", dynamic_arr[i].d_un.d_ptr);
-    }    
+    }  
 
     fclose(file_pointer);
 }
