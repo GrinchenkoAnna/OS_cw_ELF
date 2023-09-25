@@ -12,8 +12,13 @@ int number_of_segment_headers = 0;
 long size_of_segment_headers = 0;
 
 long dynamic_offset = 0;
-long dynamic_size = 0;
-long needed_offset = 0;
+
+long rel_offset[4] = { 0, 0, 0, 0 };
+long rel_size[4] = { 0, 0, 0, 0 };
+int rel_index = 0;
+long rela_offset[4] = { 0, 0, 0, 0 };
+long rela_size[4] = { 0, 0, 0, 0 };
+int rela_index = 0;
 
 //header
 void read_header(const char* filename)
@@ -1009,7 +1014,10 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             break;
             
         case SHT_RELA:
-            printf("RELA                ");
+            printf("RELA                ");            
+            rela_offset[rela_index] = section_headers[i].sh_offset;  
+            rela_size[rela_index] = section_headers[i].sh_size; 
+            rela_index++;    
             break;
                 
         case SHT_HASH:
@@ -1019,7 +1027,6 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
         case SHT_DYNAMIC:
             printf("DYNAMIC             ");
             dynamic_offset = section_headers[i].sh_offset;
-            dynamic_size = section_headers[i].sh_size;
             break;
             
         case SHT_NOTE:
@@ -1032,6 +1039,9 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
                 
         case SHT_REL:
             printf("NOBITS              ");
+            rel_offset[rel_index] = section_headers[i].sh_offset;  
+            rel_size[rel_index] = section_headers[i].sh_size; 
+            rel_index++;    
             break;
             
         case SHT_SHLIB:
@@ -1416,7 +1426,7 @@ void read_sections(const char* filename)
           SEEK_SET);
     int size_of_section = section_headers[section_header_string_table_index].sh_size;
     char string_keeper[size_of_section];    
-    fread(string_keeper, 1, size_of_section, file_pointer);   
+    fread(string_keeper, size_of_section, 1, file_pointer);   
     
     printf("  ----|--------------------|-------------------|----------|-"
            "-----|------|--|---|--|---|--\n");
@@ -1663,9 +1673,8 @@ void read_segments(const char* filename)
     fclose(file_pointer);
 }
 
-void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements)
+void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* file_pointer)
 {
-
     switch (dynamic_arr[i].d_tag)
     {
         case DT_NULL:
@@ -1675,7 +1684,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements)
 
         case DT_NEEDED:
             printf("(NEEDED)");
-            //??
+            //!!
             break;
 
         case DT_PLTRELSZ:
@@ -1950,10 +1959,36 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements)
 
         case DT_FEATURE_1:
             printf("(FEATURE_1)");
+            switch (dynamic_arr[i].d_un.d_val)
+            {
+                case DTF_1_PARINIT:
+                    printf("\t\tPARINIT");
+                    break;
+                
+                case DTF_1_CONFEXP:
+                    printf("\t\tCONFEXP");
+                    break;
+
+                default:
+                    printf("\t\tНе опр.");
+            }
             break;
 
         case DT_POSFLAG_1:
             printf("(POSFLAG_1)");
+            switch (dynamic_arr[i].d_un.d_val)
+            {
+                case DF_P1_LAZYLOAD:
+                    printf("\t\tLAZYLOAD");
+                    break;
+                
+                case DF_P1_GROUPPERM:
+                    printf("\t\tGROUPPERM");
+                    break;
+
+                default:
+                    printf("\t\tНе опр.");
+            }
             break;
 
         case DT_SYMINSZ:
@@ -2187,9 +2222,35 @@ void read_section_dynamic(const char* filename) //не считает кол-в�
     for (int i = 0; i < count; i++)
     {        
         printf("0x%016lx ", dynamic_arr[i].d_tag);
-        print_d_tag(i, dynamic_arr, count);
+        print_d_tag(i, dynamic_arr, count, file_pointer);
         printf("\n");
     }  
+
+    printf("\n");
+    fclose(file_pointer);
+}
+
+void read_section_rel_a(const char* filename)
+{
+    FILE* file_pointer;
+    Elf64_Rela rela;
+
+    file_pointer = fopen(filename, "r"); 
+    int number_of_rs = 0;    
+
+    for (int i = 0; i < rela_index; i++)
+    {
+        fseek(file_pointer, rela_offset[i], SEEK_SET);
+        number_of_rs = rela_size[i]/sizeof(Elf64_Rela);        
+        for (int j = 0; j < number_of_rs; j++)
+        {
+            fread(&rela, sizeof(Elf64_Rela), 1, file_pointer);
+            printf("%lx ", rela.r_offset);
+            printf("%lx ", rela.r_info); //see elf.h
+            printf("%lx\n", rela.r_addend);
+        }
+        printf("\n");       
+    }    
 
     fclose(file_pointer);
 }
@@ -2202,6 +2263,7 @@ int main()
     read_segments(filename);
 
     read_section_dynamic(filename);
+    read_section_rel_a(filename);
 
     return 0;
 }
