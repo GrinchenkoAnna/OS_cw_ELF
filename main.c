@@ -16,9 +16,14 @@ long dynamic_offset = 0;
 long rel_offset[4] = { 0, 0, 0, 0 };
 long rel_size[4] = { 0, 0, 0, 0 };
 int rel_index = 0;
+int rel_index_in_section_headers[4] = {-1, -1, -1, -1};
+
 long rela_offset[4] = { 0, 0, 0, 0 };
 long rela_size[4] = { 0, 0, 0, 0 };
 int rela_index = 0;
+int rela_index_in_section_headers[4] = {-1, -1, -1, -1};
+
+long relocs_arch = 0;
 
 //header
 void read_header(const char* filename)
@@ -415,6 +420,7 @@ void read_header(const char* filename)
 
         case EM_X86_64:
             printf("AMD x86-64 architecture\n");
+            relocs_arch = EM_X86_64;
             break;
 
         case EM_PDSP:
@@ -1017,6 +1023,7 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             printf("RELA                ");            
             rela_offset[rela_index] = section_headers[i].sh_offset;  
             rela_size[rela_index] = section_headers[i].sh_size; 
+            rela_index_in_section_headers[rela_index] = i;
             rela_index++;    
             break;
                 
@@ -1041,6 +1048,7 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             printf("NOBITS              ");
             rel_offset[rel_index] = section_headers[i].sh_offset;  
             rel_size[rel_index] = section_headers[i].sh_size; 
+            rel_index_in_section_headers[rel_index] = i;
             rel_index++;    
             break;
             
@@ -1446,7 +1454,9 @@ void read_sections(const char* filename)
 
         print_sh_type_in_detail(i, section_headers); 
         printf("  ----|--------------------|-------------------|----------|-"
-               "-----|------|--|---|--|---|--\n");          
+               "-----|------|--|---|--|---|--\n");      
+
+            
         
     }
     printf("Обозначения флагов:\n");
@@ -2230,24 +2240,242 @@ void read_section_dynamic(const char* filename) //не считает кол-в�
     fclose(file_pointer);
 }
 
-void read_section_rel_a(const char* filename)
+void reloc_x86_64(Elf64_Xword info)
+{
+    switch (ELF64_R_TYPE(info))
+    {
+        case R_X86_64_NONE:
+            printf("R_X86_64_NONE");
+            break;
+
+        case R_X86_64_64:
+            printf("R_X86_64_64");
+            break;
+
+        case R_X86_64_PC32:
+            printf("R_X86_64_PC32");
+            break;
+
+        case R_X86_64_GOT32:
+            printf("R_X86_64_GOT32");
+            break;
+
+        case R_X86_64_PLT32:
+            printf("R_X86_64_PLT32");
+            break;
+
+        case R_X86_64_COPY:
+            printf("R_X86_64_COPY");
+            break;
+
+        case R_X86_64_GLOB_DAT:
+            printf("R_X86_64_GLOB_DAT");
+            break;
+
+        case R_X86_64_JUMP_SLOT:
+            printf("R_X86_64_JUMP_SLOT");
+            break;
+
+        case R_X86_64_RELATIVE:
+            printf("R_X86_64_RELATIVE");
+            break;
+
+        case R_X86_64_GOTPCREL:
+            printf("R_X86_64_GOTPCREL");
+            break;
+
+        case R_X86_64_32:
+            printf("R_X86_64_32");
+            break;
+
+        case R_X86_64_32S:
+            printf("R_X86_64_32S");
+            break;
+
+        case R_X86_64_16:
+            printf("R_X86_64_16");
+            break;
+
+        case R_X86_64_PC16:
+            printf("R_X86_64_PC16");
+            break;
+
+        case R_X86_64_8:
+            printf("R_X86_64_8");
+            break;
+
+        case R_X86_64_PC8:
+            printf("R_X86_64_PC8");
+            break;
+
+        case R_X86_64_DTPMOD64:
+            printf("R_X86_64_DTPMOD64");
+            break;
+
+        case R_X86_64_DTPOFF64:
+            printf("R_X86_64_DTPOFF64");
+            break;
+
+        case R_X86_64_TPOFF64:
+            printf("R_X86_64_TPOFF64");
+            break;
+
+        case R_X86_64_TLSGD:
+            printf("R_X86_64_TLSGD");
+            break;
+
+        case R_X86_64_TLSLD:
+            printf("R_X86_64_TLSLD");
+            break;
+
+        case R_X86_64_DTPOFF32:
+            printf("R_X86_64_DTPOFF32");
+            break;
+
+        case R_X86_64_GOTTPOFF:
+            printf("R_X86_64_GOTTPOFF");
+            break;
+
+        case R_X86_64_TPOFF32:
+            printf("R_X86_64_TPOFF32");
+            break;
+
+        case R_X86_64_PC64:
+            printf("R_X86_64_PC64");
+            break;
+
+        case R_X86_64_GOTOFF64:
+            printf("R_X86_64_GOTOFF64");
+            break;
+
+        case R_X86_64_GOTPC32:
+            printf("R_X86_64_GOTPC32");
+            break;
+
+        case R_X86_64_GOT64:
+            printf("R_X86_64_GOT64");
+            break;
+
+        case R_X86_64_GOTPCREL64:
+            printf("R_X86_64_GOTPCREL64");
+            break;
+
+        case R_X86_64_GOTPC64:
+            printf("R_X86_64_GOTPC64");
+            break;
+
+        case R_X86_64_GOTPLT64:
+            printf("R_X86_64_GOTPLT64");
+            break;
+
+        case R_X86_64_PLTOFF64:
+            printf("R_X86_64_PLTOFF64");
+            break;
+
+        case R_X86_64_SIZE32:
+            printf("R_X86_64_SIZE32");
+            break;
+
+        case R_X86_64_SIZE64:
+            printf("R_X86_64_SIZE64");
+            break;
+
+        case R_X86_64_GOTPC32_TLSDESC:
+            printf("R_X86_64_GOTPC32_TLSDESC");
+            break;
+
+        case R_X86_64_TLSDESC_CALL:
+            printf("R_X86_64_TLSDESC_CALL");
+            break;
+
+        case R_X86_64_TLSDESC:
+            printf("R_X86_64_TLSDESC");
+            break;
+
+        case R_X86_64_IRELATIVE:
+            printf("R_X86_64_IRELATIVE");
+            break;
+
+        case R_X86_64_RELATIVE64:
+            printf("R_X86_64_RELATIVE64");
+            break;
+
+        case R_X86_64_GOTPCRELX:
+            printf("R_X86_64_GOTPCRELX");
+            break;      
+
+        case R_X86_64_REX_GOTPCRELX:
+            printf("R_X86_64_REX_GOTPCRELX");
+            break;   
+
+        case R_X86_64_NUM:
+            printf("R_X86_64_NUM");
+            break;   
+
+        default:
+            break;        
+    }
+    printf("\t");
+}
+
+void read_section_rel_a(const char* filename) //пока только для rela
 {
     FILE* file_pointer;
-    Elf64_Rela rela;
+    Elf64_Rela rela;    
+    
+    int number_of_rs = 0; 
+    int index = 0;
 
-    file_pointer = fopen(filename, "r"); 
-    int number_of_rs = 0;    
+    file_pointer = fopen(filename, "r");      
+
+    Elf64_Shdr section_headers[number_of_section_headers]; 
+    fseek(file_pointer, start_of_section_headers, SEEK_SET);
+    fread(section_headers, sizeof(Elf64_Shdr), number_of_section_headers, \
+        file_pointer);
+    fseek(file_pointer, \
+        section_headers[section_header_string_table_index].sh_offset, \
+        SEEK_SET);
+    int size_of_section = section_headers[section_header_string_table_index].sh_size;
+    char string_keeper[size_of_section];    
+    fread(string_keeper, 1, size_of_section, file_pointer); 
 
     for (int i = 0; i < rela_index; i++)
-    {
+    {   
         fseek(file_pointer, rela_offset[i], SEEK_SET);
-        number_of_rs = rela_size[i]/sizeof(Elf64_Rela);        
+
+        number_of_rs = rela_size[i]/sizeof(Elf64_Rela);  
+        index = rela_index_in_section_headers[i];
+
+        fread(&rela, sizeof(Elf64_Rela), 1, file_pointer); 
+
+        if ( index > 0 && (section_headers[index].sh_type == SHT_RELA
+                           || section_headers[index].sh_type == SHT_REL)) 
+        {      
+            printf("Раздел перемещения '%s' по смещению 0x%lx "
+                "содержит %d элемент:\n", \
+                &string_keeper[section_headers[index].sh_name],\
+                rela_offset[i], number_of_rs);
+            printf("  Смещение       Инфо           Тип"
+            "                 Знач.симв.   Имя симв. + Addend\n");
+        } 
+
         for (int j = 0; j < number_of_rs; j++)
-        {
-            fread(&rela, sizeof(Elf64_Rela), 1, file_pointer);
-            printf("%lx ", rela.r_offset);
-            printf("%lx ", rela.r_info); //see elf.h
-            printf("%lx\n", rela.r_addend);
+        {              
+            printf("%012lx ", rela.r_offset);
+            printf("%012lx ", rela.r_info); 
+            switch (relocs_arch) //only for AMD x86-64 (others define similarly)
+            {
+                case EM_X86_64:
+                    reloc_x86_64(rela.r_info);
+                    break;
+                
+                default:
+                    break;
+            }
+            printf("%016lx ", ELF64_R_SYM(rela.r_addend)); 
+            
+            printf("\n");
+            fread(&rela, sizeof(Elf64_Rela), 1, file_pointer); 
         }
         printf("\n");       
     }    
