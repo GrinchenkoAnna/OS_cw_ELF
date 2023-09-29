@@ -22,21 +22,18 @@ long rela_offset[4] = { 0, 0, 0, 0 };
 long rela_size[4] = { 0, 0, 0, 0 };
 int rela_index = 0;
 int rela_index_in_section_headers[4] = {-1, -1, -1, -1};
-
 long relocs_arch = 0;
 
-//header
-void read_header(const char* filename)
-{
-    FILE* file_pointer;
-    Elf64_Ehdr header;
+long dynsym_offset = 0;
+long dynsym_size = 0;
 
-    file_pointer = fopen(filename, "r");
-    if (!file_pointer)
-    {
-        perror ("Невозможно открыть ELF-файл");
-        exit(1);
-    }
+long symtab_offset = 0;
+long symtab_size = 0;
+
+//header
+void read_header(FILE* file_pointer)
+{
+    Elf64_Ehdr header;
     
     fread(&header, sizeof(Elf64_Ehdr), 1, file_pointer);
     if (header.e_ident[EI_MAG0] != 0x7f
@@ -995,7 +992,6 @@ void read_header(const char* filename)
     section_header_string_table_index = header.e_shstrndx;
 
     printf("\n");
-    fclose(file_pointer);
 }
 
 //sections
@@ -1013,6 +1009,8 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             
         case SHT_SYMTAB:
             printf("SYMTAB              ");
+            symtab_offset = section_headers[i].sh_offset;
+            symtab_size = section_headers[i].sh_size;
             break;
                 
         case SHT_STRTAB:
@@ -1058,6 +1056,8 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             
         case SHT_DYNSYM:
             printf("DYNSYM              ");
+            dynsym_offset = section_headers[i].sh_offset;
+            dynsym_size = section_headers[i].sh_size;
             break;
                 
         case SHT_INIT_ARRAY:
@@ -1395,13 +1395,11 @@ void print_sh_flags(int i, Elf64_Shdr *section_headers)
     printf("\t");
 }
 
-void read_sections(const char* filename)
+void read_sections(FILE* file_pointer)
 {
     Elf64_Shdr *section_headers; //массив указателей на структуры
     section_headers = (Elf64_Shdr*)malloc(number_of_section_headers);
-
-    FILE* file_pointer; 
-    file_pointer = fopen(filename, "r");
+    
     fseek(file_pointer, start_of_section_headers, SEEK_SET); 
     /*в массив считывается определенное ранее число указателей на структуры*/   
     fread(section_headers, sizeof(Elf64_Shdr), number_of_section_headers, \
@@ -1464,8 +1462,6 @@ void read_sections(const char* filename)
     printf("  I (инфо), L (порядок ссылок), O (требуется дополнительная работа ОС),\n");
     printf("  G (группа), T (TLS), C (сжат), o (специфич. для ОС)\n");
     printf("  R (не исп. GC при компоновке), E (исключен), p (processor specific)\n\n");
-
-    fclose(file_pointer);
 }
 
 void print_p_flags(int i, Elf64_Phdr *segment_headers)
@@ -1484,12 +1480,10 @@ void print_p_flags(int i, Elf64_Phdr *segment_headers)
     printf("\t");
 }
 
-void read_segments(const char* filename)
-{
-    FILE* file_pointer;
-    Elf64_Ehdr header;      
+void read_segments(FILE* file_pointer)
+{    
+    Elf64_Ehdr header;  
 
-    file_pointer = fopen(filename, "r"); 
     fread(&header, sizeof(Elf64_Ehdr), 1, file_pointer); 
 
     printf("Тип файла ELF - ");
@@ -1680,7 +1674,6 @@ void read_segments(const char* filename)
         printf("\n");
     }    
     printf("\n");
-    fclose(file_pointer);
 }
 
 void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* file_pointer)
@@ -2197,12 +2190,10 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* fi
     }
 }
 
-void read_section_dynamic(const char* filename) //не считает кол-во записей
+void read_section_dynamic(FILE* file_pointer) //не считает кол-во записей
 {
-    FILE* file_pointer;
     Elf64_Dyn dynamic;
 
-    file_pointer = fopen(filename, "r"); 
     fseek(file_pointer, dynamic_offset, SEEK_SET);
     fread(&dynamic, sizeof(Elf64_Dyn), 1, file_pointer);    
     
@@ -2237,7 +2228,6 @@ void read_section_dynamic(const char* filename) //не считает кол-в�
     }  
 
     printf("\n");
-    fclose(file_pointer);
 }
 
 void reloc_x86_64(Elf64_Xword info)
@@ -2418,15 +2408,12 @@ void reloc_x86_64(Elf64_Xword info)
     printf("\t");
 }
 
-void read_section_rel_a(const char* filename) //пока только для rela
+void read_section_rel_a(FILE* file_pointer) //пока только для rela (для rel - аналогично)
 {
-    FILE* file_pointer;
     Elf64_Rela rela;    
     
     int number_of_rs = 0; 
     int index = 0;
-
-    file_pointer = fopen(filename, "r");      
 
     Elf64_Shdr section_headers[number_of_section_headers]; 
     fseek(file_pointer, start_of_section_headers, SEEK_SET);
@@ -2479,19 +2466,322 @@ void read_section_rel_a(const char* filename) //пока только для rel
         }
         printf("\n");       
     }    
+}
 
-    fclose(file_pointer);
+void read_section_dynsym(FILE* file_pointer)
+{
+    int number_of_ds = dynsym_size/sizeof(Elf64_Sym);
+    Elf64_Sym dynsym[number_of_ds];       
+    fseek(file_pointer, dynsym_offset, SEEK_SET);
+    fread(dynsym, sizeof(Elf64_Sym), number_of_ds, file_pointer); 
+
+    printf("Таблица символов \".dynsym\" содержит %d элементов:\n", number_of_ds);
+    printf("   Чис:    Знач           Разм Тип      Связ    Vis     Индекс имени\n");
+
+    for (int j = 0; j < number_of_ds; j++)
+    {
+        printf("     %2d: ", j);
+        printf("%016lx ", dynsym[j].st_value);
+        printf("%4ld ", dynsym[j].st_size); 
+        switch (ELF64_ST_TYPE(dynsym[j].st_info))
+        {
+            case STT_NOTYPE:
+                printf("NOTYPE\t");
+                break;
+
+            case STT_OBJECT:
+                printf("OBJECT\t");
+                break;
+
+            case STT_FUNC:
+                printf("FUNC\t");
+                break;
+
+            case STT_SECTION:
+                printf("SECTION\t");
+                break;
+
+            case STT_FILE:
+                printf("FILE\t");
+                break;
+
+            case STT_COMMON:
+                printf("COMMON\t");
+                break;
+
+            case STT_TLS:
+                printf("TLS\t");
+                break;
+
+            case STT_NUM:
+                printf("NUM\t");
+                break;
+
+            case STT_LOOS:
+                printf("LOOS\t");
+                break;
+
+            //значение = STT_LOOS
+            // case STT_GNU_IFUNC:
+            //     printf("GNU_IFUNC\t");
+            //     break;
+
+            case STT_HIOS:
+                printf("HIOS\t");
+                break;
+
+            case STT_LOPROC:
+                printf("LOPROC\t");
+                break;
+
+            case STT_HIPROC:
+                printf("HIPROC\t");
+                break;
+
+            default:
+                printf("Не опр.");
+                break;
+        }
+        switch (ELF64_ST_BIND(dynsym[j].st_info))
+        {
+            case STB_LOCAL:
+                printf("LOCAL\t");
+                break;
+
+            case STB_GLOBAL:
+                printf("GLOBAL\t");
+                break;
+
+            case STB_WEAK:
+                printf("WEAK\t");
+                break;
+
+            case STB_NUM:
+                printf("NUM\t");
+                break;
+
+            case STB_LOOS:
+                printf("LOOS\t");
+                break;
+
+            //значение = STB_LOOS
+            // case STB_GNU_UNIQUE:
+            //     printf("GNU_UNIQUE\t");
+            //     break;
+
+            case STB_HIOS:
+                printf("HIOS\t");
+                break;
+
+            case STB_LOPROC:
+                printf("LOPROC\t");
+                break;
+
+            case STB_HIPROC:
+                printf("HIPROC\t");
+                break;
+
+            default:
+                printf("Не опр.\t");
+                break;
+        }
+        switch (ELF64_ST_VISIBILITY(dynsym[j].st_other))
+        {
+            case STV_DEFAULT:
+                printf("DEFAULT\t");
+                break;
+
+            case STV_INTERNAL:
+                printf("INTERNAL\t");
+                break;
+
+            case STV_HIDDEN:
+                printf("HIDDEN\t");
+                break;
+
+            case STV_PROTECTED:
+                printf("PROTECTED\t");
+                break;
+
+            default:
+                printf("Не опр.\t");
+                break;
+        }
+        //printf("%u ", dynsym[j].st_name);  
+
+        printf("\n"); 
+        fread(dynsym, sizeof(Elf64_Sym), 1, file_pointer);       
+    }
+    printf("\n");   
+}
+
+void read_section_symtab(FILE* file_pointer)
+{
+    int number_of_ds = symtab_size/sizeof(Elf64_Sym);
+    Elf64_Sym symtab[number_of_ds];       
+    fseek(file_pointer, symtab_offset, SEEK_SET);
+    fread(symtab, sizeof(Elf64_Sym), number_of_ds, file_pointer); 
+
+    printf("Таблица символов \".symtab\" содержит %d элементов:\n", number_of_ds);
+    printf("   Чис:    Знач           Разм Тип      Связ    Vis     Индекс имени\n");
+
+    for (int j = 0; j < number_of_ds; j++)
+    {
+        printf("     %2d: ", j);
+        printf("%016lx ", symtab[j].st_value);
+        printf("%4ld ", symtab[j].st_size); 
+        switch (ELF64_ST_TYPE(symtab[j].st_info))
+        {
+            case STT_NOTYPE:
+                printf("NOTYPE\t");
+                break;
+
+            case STT_OBJECT:
+                printf("OBJECT\t");
+                break;
+
+            case STT_FUNC:
+                printf("FUNC\t");
+                break;
+
+            case STT_SECTION:
+                printf("SECTION\t");
+                break;
+
+            case STT_FILE:
+                printf("FILE\t");
+                break;
+
+            case STT_COMMON:
+                printf("COMMON\t");
+                break;
+
+            case STT_TLS:
+                printf("TLS\t");
+                break;
+
+            case STT_NUM:
+                printf("NUM\t");
+                break;
+
+            case STT_LOOS:
+                printf("LOOS\t");
+                break;
+
+            //значение = STT_LOOS
+            // case STT_GNU_IFUNC:
+            //     printf("GNU_IFUNC\t");
+            //     break;
+
+            case STT_HIOS:
+                printf("HIOS\t");
+                break;
+
+            case STT_LOPROC:
+                printf("LOPROC\t");
+                break;
+
+            case STT_HIPROC:
+                printf("HIPROC\t");
+                break;
+
+            default:
+                printf("Не опр.");
+                break;
+        }
+        switch (ELF64_ST_BIND(symtab[j].st_info))
+        {
+            case STB_LOCAL:
+                printf("LOCAL\t");
+                break;
+
+            case STB_GLOBAL:
+                printf("GLOBAL\t");
+                break;
+
+            case STB_WEAK:
+                printf("WEAK\t");
+                break;
+
+            case STB_NUM:
+                printf("NUM\t");
+                break;
+
+            case STB_LOOS:
+                printf("LOOS\t");
+                break;
+
+            //значение = STB_LOOS
+            // case STB_GNU_UNIQUE:
+            //     printf("GNU_UNIQUE\t");
+            //     break;
+
+            case STB_HIOS:
+                printf("HIOS\t");
+                break;
+
+            case STB_LOPROC:
+                printf("LOPROC\t");
+                break;
+
+            case STB_HIPROC:
+                printf("HIPROC\t");
+                break;
+
+            default:
+                printf("Не опр.\t");
+                break;
+        }
+        switch (ELF64_ST_VISIBILITY(symtab[j].st_other))
+        {
+            case STV_DEFAULT:
+                printf("DEFAULT\t");
+                break;
+
+            case STV_INTERNAL:
+                printf("INTERNAL\t");
+                break;
+
+            case STV_HIDDEN:
+                printf("HIDDEN\t");
+                break;
+
+            case STV_PROTECTED:
+                printf("PROTECTED\t");
+                break;
+
+            default:
+                printf("Не опр.\t");
+                break;
+        }
+        //printf("%u ", dynsym[j].st_name);  
+
+        printf("\n"); 
+        fread(symtab, sizeof(Elf64_Sym), 1, file_pointer);       
+    }
+
 }
 
 int main()
 {   
     char filename[] = "example";
-    read_header(filename);
-    read_sections(filename);
-    read_segments(filename);
+    FILE* file_pointer;
+    file_pointer = fopen(filename, "r");
+    if (!file_pointer)
+    {
+        perror ("Невозможно открыть ELF-файл");
+        exit(1);
+    }
+    
+    read_header(file_pointer);
+    read_sections(file_pointer);
+    read_segments(file_pointer);
 
-    read_section_dynamic(filename);
-    read_section_rel_a(filename);
+    read_section_dynamic(file_pointer);
+    read_section_rel_a(file_pointer);
+    read_section_dynsym(file_pointer);
+    read_section_symtab(file_pointer);
 
+    fclose(file_pointer);
     return 0;
 }
