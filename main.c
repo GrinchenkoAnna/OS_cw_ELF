@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <inttypes.h>
 #include <elf.h>
+#include <link.h>
 
 long start_of_section_headers = 0;
 int number_of_section_headers = 0;
@@ -12,6 +13,7 @@ int number_of_segment_headers = 0;
 long size_of_segment_headers = 0;
 
 long dynamic_offset = 0;
+long dynamic_size = 0;
 
 long rel_offset[4] = { 0, 0, 0, 0 };
 long rel_size[4] = { 0, 0, 0, 0 };
@@ -32,6 +34,8 @@ long symtab_size = 0;
 
 long gnu_verneed_offset = 0;
 int gnu_verneed_num = 0;
+
+long strtab_offset = 0;
 
 //header
 void read_header(FILE* file_pointer)
@@ -1035,6 +1039,7 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
         case SHT_DYNAMIC:
             printf("DYNAMIC             ");
             dynamic_offset = section_headers[i].sh_offset;
+            dynamic_size = section_headers[i].sh_size;
             break;
             
         case SHT_NOTE:
@@ -1683,7 +1688,7 @@ void read_segments(FILE* file_pointer)
     printf("\n");
 }
 
-void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* file_pointer)
+void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* file_pointer, char* str)
 {
     switch (dynamic_arr[i].d_tag)
     {
@@ -1694,7 +1699,8 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* fi
 
         case DT_NEEDED:
             printf("(NEEDED)");
-            //!!
+            //printf("\t\t%s", &str[(int)dynamic_arr[i].d_un.d_val]);
+            //printf("%lx", dynamic_arr[i].d_un.d_val);
             break;
 
         case DT_PLTRELSZ:
@@ -1715,6 +1721,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* fi
         case DT_STRTAB:
             printf("(STRTAB)");
             printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
+            strtab_offset = dynamic_arr[i].d_un.d_ptr;
             break;
 
         case DT_SYMTAB:
@@ -2219,11 +2226,16 @@ void read_section_dynamic(FILE* file_pointer) //не считает кол-во 
 
     Elf64_Dyn dynamic_arr[count];
     fseek(file_pointer, dynamic_offset, SEEK_SET);   
+    //--доработать
+    char dynamic_string_keeper[dynamic_size];
+    fread(dynamic_string_keeper, 1, dynamic_size, file_pointer);
+    //--
     
     printf("Динамический раздел .dynamic со смещением 0x%lx "
     "содержит %d элементов:\n", dynamic_offset, count);
     printf("  Тег               Тип\t\t\tИмя/Знач\n");
     
+    fseek(file_pointer, dynamic_offset, SEEK_SET);   
     for (int i = 0; i < count; i++)
     {
         fread(&dynamic_arr[i], sizeof(Elf64_Dyn), 1, file_pointer);        
@@ -2231,7 +2243,9 @@ void read_section_dynamic(FILE* file_pointer) //не считает кол-во 
     for (int i = 0; i < count; i++)
     {        
         printf("0x%016lx ", dynamic_arr[i].d_tag);
-        print_d_tag(i, dynamic_arr, count, file_pointer);
+        print_d_tag(i, dynamic_arr, count, file_pointer, dynamic_string_keeper);
+        //print_d_tag(i, dynamic_arr, count, file_pointer);
+
         printf("\n");
     }  
 
@@ -2418,8 +2432,6 @@ void reloc_x86_64(Elf64_Xword info)
 
 void read_section_rel_a(FILE* file_pointer) //пока только для rela (для rel - аналогично)
 {
-    Elf64_Rela rela;    
-    
     int number_of_rs = 0; 
     int index = 0;
 
@@ -2431,6 +2443,7 @@ void read_section_rel_a(FILE* file_pointer) //пока только для rela 
         section_headers[section_header_string_table_index].sh_offset, \
         SEEK_SET);
     int size_of_section = section_headers[section_header_string_table_index].sh_size;
+
     char string_keeper[size_of_section];    
     fread(string_keeper, 1, size_of_section, file_pointer); 
 
@@ -2440,8 +2453,9 @@ void read_section_rel_a(FILE* file_pointer) //пока только для rela 
 
         number_of_rs = rela_size[i]/sizeof(Elf64_Rela);  
         index = rela_index_in_section_headers[i];
+        Elf64_Rela rela[number_of_rs];   
 
-        fread(&rela, sizeof(Elf64_Rela), 1, file_pointer); 
+        fread(rela, sizeof(Elf64_Rela), number_of_rs, file_pointer); 
 
         if ( index > 0 && (section_headers[index].sh_type == SHT_RELA
                            || section_headers[index].sh_type == SHT_REL)) 
@@ -2456,21 +2470,29 @@ void read_section_rel_a(FILE* file_pointer) //пока только для rela 
 
         for (int j = 0; j < number_of_rs; j++)
         {              
-            printf("%012lx ", rela.r_offset);
-            printf("%012lx ", rela.r_info); 
+            printf("%012lx ", rela[j].r_offset);
+            printf("%012lx ", rela[j].r_info); 
             switch (relocs_arch) //only for AMD x86-64 (others define similarly)
             {
                 case EM_X86_64:
-                    reloc_x86_64(rela.r_info);
+                    reloc_x86_64(rela[j].r_info);
                     break;
                 
                 default:
                     break;
             }
-            printf("%016lx ", ELF64_R_SYM(rela.r_addend)); 
+            printf("%016lx ", ELF64_R_SYM(rela[j].r_addend)); 
+
+            //--доработать
+            if (string_keeper[ELF64_R_SYM(rela[j].r_info)])
+            {
+                printf("%s + ", &string_keeper[ELF64_R_SYM(rela[j].r_info)]);  
+            }    
+            //--
+
+            printf("%lx", rela[j].r_addend);
             
             printf("\n");
-            fread(&rela, sizeof(Elf64_Rela), 1, file_pointer); 
         }
         printf("\n");       
     }    
@@ -2482,6 +2504,9 @@ void read_section_dynsym(FILE* file_pointer)
     Elf64_Sym dynsym[number_of_ds];       
     fseek(file_pointer, dynsym_offset, SEEK_SET);
     fread(dynsym, sizeof(Elf64_Sym), number_of_ds, file_pointer); 
+    char dynsym_string_keeper[dynsym_size];
+    fread (dynsym_string_keeper, 1, dynsym_size, file_pointer);
+    
 
     printf("Таблица символов \".dynsym\" содержит %d элементов:\n", number_of_ds);
     printf("   Чис:    Знач           Разм Тип      Связ    Vis     Индекс имени\n");
@@ -2615,7 +2640,7 @@ void read_section_dynsym(FILE* file_pointer)
                 printf("Не опр.\t");
                 break;
         }
-        //printf("%u ", dynsym[j].st_name);  
+        printf("%s ", &dynsym_string_keeper[dynsym[j].st_name]);  
 
         printf("\n"); 
         fread(dynsym, sizeof(Elf64_Sym), 1, file_pointer);       
@@ -2629,6 +2654,8 @@ void read_section_symtab(FILE* file_pointer)
     Elf64_Sym symtab[number_of_ds];       
     fseek(file_pointer, symtab_offset, SEEK_SET);
     fread(symtab, sizeof(Elf64_Sym), number_of_ds, file_pointer); 
+    char symtab_string_keeper[symtab_size];
+    fread(symtab_string_keeper, 1, symtab_size, file_pointer);
 
     printf("Таблица символов \".symtab\" содержит %d элементов:\n", number_of_ds);
     printf("   Чис:    Знач           Разм Тип      Связ    Vis     Индекс имени\n");
@@ -2762,7 +2789,7 @@ void read_section_symtab(FILE* file_pointer)
                 printf("Не опр.\t");
                 break;
         }
-        //printf("%u ", dynsym[j].st_name);  
+        printf("%s ", &symtab_string_keeper[symtab[j].st_name]);  
 
         printf("\n"); 
         fread(symtab, sizeof(Elf64_Sym), 1, file_pointer);       
@@ -2825,6 +2852,15 @@ void read_section_gnu_version(FILE* file_pointer)
     printf("\n");  
 }
 
+// void read_strtab(FILE* file_pointer)
+// {
+//     printf("strtab:\n");
+//     fseek(file_pointer, strtab_offset, SEEK_SET);
+            
+    
+//     printf("\nend of strtab\n");
+// }
+
 int main()
 {   
     char filename[] = "example";
@@ -2845,6 +2881,8 @@ int main()
     read_section_dynsym(file_pointer);
     read_section_symtab(file_pointer);
     read_section_gnu_version(file_pointer);
+
+    //read_strtab(file_pointer);
 
     fclose(file_pointer);
     return 0;
