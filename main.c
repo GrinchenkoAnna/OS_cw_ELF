@@ -12,6 +12,10 @@ long start_of_segment_headers = 0;
 int number_of_segment_headers = 0;
 long size_of_segment_headers = 0;
 
+long strtab_offset = 0;
+long strtab_size = 0;
+
+
 long dynamic_offset = 0;
 long dynamic_size = 0;
 
@@ -33,9 +37,8 @@ long symtab_offset = 0;
 long symtab_size = 0;
 
 long gnu_verneed_offset = 0;
+long gnu_verneed_size = 0;
 int gnu_verneed_num = 0;
-
-long strtab_offset = 0;
 
 //header
 void read_header(FILE* file_pointer)
@@ -1022,6 +1025,7 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
                 
         case SHT_STRTAB:
             printf("STRTAB              ");
+            strtab_size = section_headers[i].sh_size;
             break;
             
         case SHT_RELA:
@@ -1137,6 +1141,7 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
         case SHT_GNU_verneed:
             printf("GNU_verneed         ");
             gnu_verneed_offset = section_headers[i].sh_offset;
+            gnu_verneed_size = section_headers[i].sh_size;
             break;
             
         case SHT_GNU_versym:
@@ -1193,6 +1198,7 @@ void print_sh_type_in_detail(int i, Elf64_Shdr *section_headers)
         case SHT_STRTAB:
             printf("                            ");
             printf("String table\n");
+            //strtab_offset = section_headers[i].sh_offset;
             break;
             
         case SHT_RELA:
@@ -1688,6 +1694,17 @@ void read_segments(FILE* file_pointer)
     printf("\n");
 }
 
+void read_needed_library(FILE* file_pointer, Elf64_Dyn *dynamic_arr, int i)
+{
+    printf("\t\tСовм. исп. библиотека: ");
+    fseek(file_pointer,  strtab_offset + dynamic_arr[i].d_un.d_val, SEEK_SET);
+
+    while (fgetc(file_pointer) != '\0')
+    {
+        printf("%c", fgetc(file_pointer));
+    }
+}
+
 void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* file_pointer, char* str)
 {
     switch (dynamic_arr[i].d_tag)
@@ -1699,6 +1716,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* fi
 
         case DT_NEEDED:
             printf("(NEEDED)");
+            read_needed_library(file_pointer, dynamic_arr, i);
             //printf("\t\t%s", &str[(int)dynamic_arr[i].d_un.d_val]);
             //printf("%lx", dynamic_arr[i].d_un.d_val);
             break;
@@ -2216,7 +2234,19 @@ void read_section_dynamic(FILE* file_pointer) //не считает кол-во 
     while (1)
     {
         fread(&dynamic, sizeof(Elf64_Dyn), 1, file_pointer);
-        if (dynamic.d_tag != 0) { count++; }
+        if (dynamic.d_tag != 0) 
+        { 
+            count++;
+            switch (dynamic.d_tag)
+            {
+                case DT_STRTAB:
+                    strtab_offset = dynamic.d_un.d_ptr;
+                    
+                    break;
+                
+                default: break;
+            } 
+        }
         else 
         {
             count++; 
@@ -2801,13 +2831,17 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
 {
     Elf64_Vernaux vernaux[num];
     fseek(file_pointer, offset, SEEK_SET);
-    fread(vernaux, sizeof(Elf64_Vernaux), 1, file_pointer);     
+    fread(vernaux, sizeof(Elf64_Vernaux), 1, file_pointer);
+
+    // fseek(file_pointer, offset, SEEK_SET); 
+    // char vernaux_string_keeper[sizeof(Elf64_Vernaux)*num];
+    // fread(vernaux_string_keeper, sizeof(Elf64_Vernaux)*num, 1, file_pointer);    
 
     for (int i = 0; i < num; i++)
     {
         printf("  0x%04x:   ", offset);
         offset = vernaux[i].vna_next;
-        printf("Имя: ");
+        //printf("Имя: %s ", &vernaux_string_keeper[vernaux[i].vna_name]);
         printf("Флаги: ");
         switch (vernaux[i].vna_flags)
         {
@@ -2827,11 +2861,25 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
     }
 }
 
+void read_file_name_verneed(FILE* file_pointer, Elf64_Verneed *verneed, int i)
+{
+    printf("Файл: ");
+    fseek(file_pointer, strtab_offset + verneed[i].vn_file + 1, SEEK_SET);
+    while (fgetc(file_pointer) != '\0')
+    {
+        printf("%c", fgetc(file_pointer));
+    }
+}
+
 void read_section_gnu_version(FILE* file_pointer)
 {
     Elf64_Verneed verneed[gnu_verneed_num];    
     fseek(file_pointer, gnu_verneed_offset, SEEK_SET);
-    fread(verneed, sizeof(Elf64_Verneed), 1, file_pointer);    
+    fread(verneed, sizeof(Elf64_Verneed), gnu_verneed_num, file_pointer); 
+
+    fseek(file_pointer, gnu_verneed_offset, SEEK_SET); 
+    char verneed_string_keeper[gnu_verneed_size];
+    fread(verneed_string_keeper, gnu_verneed_size, 1, file_pointer);  
 
     printf("Раздел Version needs \".gnu.version_r\", содержащий %d элементов:\n",
             gnu_verneed_num);
@@ -2842,9 +2890,9 @@ void read_section_gnu_version(FILE* file_pointer)
     for (int i = 0; i < gnu_verneed_num; i++)
     {
         printf("  %06x: ", verneed[i].vn_next);
-        printf("Версия: %d ", verneed[i].vn_version);
-        //??
-        //printf(" Файл: %x", verneed[i].vn_file);
+        printf("Версия: %d ", verneed[i].vn_version); 
+        read_file_name_verneed(file_pointer, verneed, i);               
+        //printf("Файл: %s ", &verneed_string_keeper[verneed[i].vn_file]);
         printf(" Счетчик: %x\n", verneed[i].vn_cnt);
 
         read_section_gnu_vernaux(file_pointer, verneed[i].vn_aux, verneed[i].vn_cnt);       
