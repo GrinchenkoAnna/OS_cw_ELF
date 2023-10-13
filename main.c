@@ -2281,6 +2281,19 @@ void read_section_dynamic(FILE* file_pointer) //не считает кол-во 
     printf("\n");
 }
 
+void read_symbol_name(FILE* file_pointer, Elf64_Rela *rela, int i)
+{       
+    char prev;
+    fseek(file_pointer, dynstr_offset, SEEK_SET);    
+    while (prev != EOF)
+    {
+        prev = fgetc(file_pointer);
+        printf("%c", prev);
+        if (prev == '\0') { break; }
+    }   
+    printf(" + "); 
+}
+
 void reloc_x86_64(Elf64_Xword info)
 {
     switch (ELF64_R_TYPE(info))
@@ -2510,15 +2523,17 @@ void read_section_rel_a(FILE* file_pointer) //пока только для rela 
                 default:
                     break;
             }
-            printf("%016lx ", ELF64_R_SYM(rela[j].r_addend)); 
 
-            //--доработать
-            if (string_keeper[ELF64_R_SYM(rela[j].r_info)])
-            {
-                printf("%s + ", &string_keeper[ELF64_R_SYM(rela[j].r_info)]);  
-            }    
-            //--
-
+            long unsigned int flag = rela[j].r_info >> 32;
+            if (flag != 0x0) 
+            {                
+                printf("%016lx ", ELF64_R_SYM(rela[j].r_addend));
+                read_symbol_name(file_pointer, rela, j); 
+            }
+            else if (flag >> 32 == 0x0)
+            {                
+                printf("                  ");
+            }
             printf("%lx", rela[j].r_addend);
             
             printf("\n");
@@ -2924,7 +2939,7 @@ int main()
     read_segments(file_pointer);
 
     read_section_dynamic(file_pointer);
-    //read_section_rel_a(file_pointer);
+    read_section_rel_a(file_pointer);
     //read_section_dynsym(file_pointer);
     //read_section_symtab(file_pointer);
     //read_section_gnu_version(file_pointer);
