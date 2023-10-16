@@ -2281,19 +2281,6 @@ void read_section_dynamic(FILE* file_pointer) //не считает кол-во 
     printf("\n");
 }
 
-void read_symbol_name(FILE* file_pointer, Elf64_Rela *rela, int i)
-{       
-    char prev;
-    fseek(file_pointer, dynstr_offset, SEEK_SET);    
-    while (prev != EOF)
-    {
-        prev = fgetc(file_pointer);
-        printf("%c", prev);
-        if (prev == '\0') { break; }
-    }   
-    printf(" + "); 
-}
-
 void reloc_x86_64(Elf64_Xword info)
 {
     switch (ELF64_R_TYPE(info))
@@ -2472,11 +2459,12 @@ void reloc_x86_64(Elf64_Xword info)
     printf("\t");
 }
 
-void read_section_rel_a(FILE* file_pointer) //пока только для rela (для rel - аналогично)
+void read_section_rel_a_and_dynsym(FILE* file_pointer) //пока только для rela (для rel - аналогично)
 {
     int number_of_rs = 0; 
     int index = 0;
 
+    //for rela name
     Elf64_Shdr section_headers[number_of_section_headers]; 
     fseek(file_pointer, start_of_section_headers, SEEK_SET);
     fread(section_headers, sizeof(Elf64_Shdr), number_of_section_headers, \
@@ -2485,9 +2473,17 @@ void read_section_rel_a(FILE* file_pointer) //пока только для rela 
         section_headers[section_header_string_table_index].sh_offset, \
         SEEK_SET);
     int size_of_section = section_headers[section_header_string_table_index].sh_size;
-
     char string_keeper[size_of_section];    
     fread(string_keeper, 1, size_of_section, file_pointer); 
+
+    //for dynsym && rela
+    int number_of_ds = dynsym_size/sizeof(Elf64_Sym);
+    Elf64_Sym dynsym[number_of_ds];       
+    fseek(file_pointer, dynsym_offset, SEEK_SET);
+    fread(dynsym, sizeof(Elf64_Sym), number_of_ds, file_pointer); 
+    char dynsym_string_keeper[dynsym_size];
+    fread (dynsym_string_keeper, 1, dynsym_size, file_pointer);
+    
 
     for (int i = 0; i < rela_index; i++)
     {   
@@ -2525,34 +2521,24 @@ void read_section_rel_a(FILE* file_pointer) //пока только для rela 
             }
 
             long unsigned int flag = rela[j].r_info >> 32;
-            if (flag != 0x0) 
+            int ds_index = ELF64_R_SYM(rela[j].r_info);
+            if (flag) 
             {                
                 printf("%016lx ", ELF64_R_SYM(rela[j].r_addend));
-                read_symbol_name(file_pointer, rela, j); 
+                printf("%s + ", &dynsym_string_keeper[dynsym[ds_index].st_name]);
             }
-            else if (flag >> 32 == 0x0)
+            else
             {                
                 printf("                  ");
             }
-            printf("%lx", rela[j].r_addend);
-            
+            printf("%lx", rela[j].r_addend);            
             printf("\n");
         }
         printf("\n");       
-    }    
-}
+    }   
 
-void read_section_dynsym(FILE* file_pointer)
-{
-    int number_of_ds = dynsym_size/sizeof(Elf64_Sym);
-    Elf64_Sym dynsym[number_of_ds];       
-    fseek(file_pointer, dynsym_offset, SEEK_SET);
-    fread(dynsym, sizeof(Elf64_Sym), number_of_ds, file_pointer); 
-    char dynsym_string_keeper[dynsym_size];
-    fread (dynsym_string_keeper, 1, dynsym_size, file_pointer);
-    
-
-    printf("Таблица символов \".dynsym\" содержит %d элементов:\n", number_of_ds);
+    //displaying dynsym
+     printf("Таблица символов \".dynsym\" содержит %d элементов:\n", number_of_ds);
     printf("   Чис:    Знач           Разм Тип      Связ    Vis     Индекс имени\n");
 
     for (int j = 0; j < number_of_ds; j++)
@@ -2684,12 +2670,10 @@ void read_section_dynsym(FILE* file_pointer)
                 printf("Не опр.\t");
                 break;
         }
-        printf("%s ", &dynsym_string_keeper[dynsym[j].st_name]);  
-
-        printf("\n"); 
-        fread(dynsym, sizeof(Elf64_Sym), 1, file_pointer);       
+        printf("%s ", &dynsym_string_keeper[dynsym[j].st_name]);
+        printf("\n");      
     }
-    printf("\n");   
+    printf("\n");    
 }
 
 void read_section_symtab(FILE* file_pointer)
@@ -2841,21 +2825,31 @@ void read_section_symtab(FILE* file_pointer)
     printf("\n");  
 }
 
+void read_name_vernaux(FILE* file_pointer, Elf64_Vernaux *vernaux, int i)
+{
+    printf("Имя: ");
+    char prev;
+    fseek(file_pointer, dynstr_offset + vernaux[i].vna_name, SEEK_SET);
+    while (1)
+    {
+        prev = fgetc(file_pointer);
+        printf("%c", prev);
+        if (prev == '\0') { break; }
+    }
+    printf(" ");
+}
+
 void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half num)
 {
     Elf64_Vernaux vernaux[num];
     fseek(file_pointer, offset, SEEK_SET);
     fread(vernaux, sizeof(Elf64_Vernaux), 1, file_pointer);
 
-    // fseek(file_pointer, offset, SEEK_SET); 
-    // char vernaux_string_keeper[sizeof(Elf64_Vernaux)*num];
-    // fread(vernaux_string_keeper, sizeof(Elf64_Vernaux)*num, 1, file_pointer);    
-
     for (int i = 0; i < num; i++)
     {
         printf("  0x%04x:   ", offset);
         offset = vernaux[i].vna_next;
-        //printf("Имя: %s ", &vernaux_string_keeper[vernaux[i].vna_name]);
+        read_name_vernaux(file_pointer, vernaux, i);
         printf("Флаги: ");
         switch (vernaux[i].vna_flags)
         {
@@ -2870,7 +2864,8 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
             default:
                 printf("нет ");
                 break;
-        }        
+        }       
+        printf("Hash: %ux ", vernaux[i].vna_hash); 
         printf("Версия: \n");
     }
 }
@@ -2878,10 +2873,13 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
 void read_file_name_verneed(FILE* file_pointer, Elf64_Verneed *verneed, int i)
 {
     printf("Файл: ");
-    fseek(file_pointer, dynstr_offset + verneed[i].vn_file + 1, SEEK_SET);
-    while (fgetc(file_pointer) != '\0')
+    char prev;
+    fseek(file_pointer, dynstr_offset + verneed[i].vn_file, SEEK_SET);
+    while (1)
     {
-        printf("%c", fgetc(file_pointer));
+        prev = fgetc(file_pointer);
+        printf("%c", prev);
+        if (prev == '\0') { break; }
     }
 }
 
@@ -2905,23 +2903,13 @@ void read_section_gnu_version(FILE* file_pointer)
     {
         printf("  %06x: ", verneed[i].vn_next);
         printf("Версия: %d ", verneed[i].vn_version); 
-        read_file_name_verneed(file_pointer, verneed, i);               
-        //printf("Файл: %s ", &verneed_string_keeper[verneed[i].vn_file]);
+        read_file_name_verneed(file_pointer, verneed, i);   
         printf(" Счетчик: %x\n", verneed[i].vn_cnt);
 
         read_section_gnu_vernaux(file_pointer, verneed[i].vn_aux, verneed[i].vn_cnt);       
     }
     printf("\n");  
 }
-
-// void read_strtab(FILE* file_pointer)
-// {
-//     printf("strtab:\n");
-//     fseek(file_pointer, dynstr_offset, SEEK_SET);
-            
-    
-//     printf("\nend of strtab\n");
-// }
 
 int main()
 {   
@@ -2939,12 +2927,10 @@ int main()
     read_segments(file_pointer);
 
     read_section_dynamic(file_pointer);
-    read_section_rel_a(file_pointer);
-    //read_section_dynsym(file_pointer);
-    //read_section_symtab(file_pointer);
-    //read_section_gnu_version(file_pointer);
+    read_section_rel_a_and_dynsym(file_pointer);
+    read_section_symtab(file_pointer);
+    read_section_gnu_version(file_pointer);
 
-    //read_strtab(file_pointer);
 
     fclose(file_pointer);
     return 0;
