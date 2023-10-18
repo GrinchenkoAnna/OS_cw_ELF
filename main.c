@@ -4,6 +4,9 @@
 #include <elf.h>
 #include <link.h>
 
+long int entry = 0; //адрес точки входа
+int type = 0; //тип ELF-файла
+
 long start_of_section_headers = 0;
 int number_of_section_headers = 0;
 int section_header_string_table_index = 0;
@@ -13,6 +16,7 @@ int number_of_segment_headers = 0;
 long size_of_segment_headers = 0;
 
 long dynstr_offset = 0;
+long dynstr_addr = 0;
 long dynstr_size = 0;
 long dynstr_size_cur = 0; 
 long dynstr_size_next = 0; 
@@ -38,6 +42,7 @@ long symtab_offset = 0;
 long symtab_size = 0;
 
 long gnu_verneed_offset = 0;
+long gnu_verneed_addr = 0;
 long gnu_verneed_size = 0;
 int gnu_verneed_num = 0;
 
@@ -242,6 +247,7 @@ void read_header(FILE* file_pointer)
             perror("Не удалось определить тип ELF-файла");
             break;
     }
+    type = header.e_type;
 
     printf("  Архитектура:\t\t\t\t");
     switch (header.e_machine)
@@ -973,27 +979,28 @@ void read_header(FILE* file_pointer)
     }
 
     printf("  Версия:\t\t\t\t0x%x\n", header.e_version);    
-    printf("  Адрес точки входа:\t\t\t0x%lx\n", header.e_entry);  
+    printf("  Адрес точки входа:\t\t\t0x%lx\n", header.e_entry); 
+    entry = header.e_entry; 
 
-    printf("  Начало заголовков программы:\t\t%lx (байтов в файле)\n", \
+    printf("  Начало заголовков программы:\t\t%ld (байт в файле)\n", \
             header.e_phoff);
     start_of_segment_headers = header.e_phoff;
 
-    printf("  Начало заголовков раздела:\t\t%lx (байтов в файле)\n", \
+    printf("  Начало заголовков раздела:\t\t%ld (байт в файле)\n", \
             header.e_shoff);
     start_of_section_headers = header.e_shoff;
 
     printf("  Флаги:\t\t\t\t0x%x\n", header.e_flags);
-    printf("  Размер заголовка ELF-файла:\t\t%d (байтов)\n", header.e_ehsize);
+    printf("  Размер заголовка ELF-файла:\t\t%d (байт)\n", header.e_ehsize);
 
-    printf("  Размер программных заголовков:\t%d (байтов)\n", \
+    printf("  Размер программных заголовков:\t%d (байт)\n", \
             header.e_phentsize);
     size_of_segment_headers = header.e_phentsize;
 
     printf("  Число заголовков программ:\t\t%d\n", header.e_phnum);
     number_of_segment_headers = header.e_phnum;
 
-    printf("  Размер заголовков секций:\t\t%d (байтов)\n", header.e_shentsize);
+    printf("  Размер заголовков секций:\t\t%d (байт)\n", header.e_shentsize);
 
     printf("  Число заголовков секций:\t\t%d\n", header.e_shnum);
     number_of_section_headers = header.e_shnum;
@@ -1142,6 +1149,7 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             printf("GNU_verneed         ");
             gnu_verneed_offset = section_headers[i].sh_offset;
             gnu_verneed_size = section_headers[i].sh_size;
+            gnu_verneed_addr = section_headers[i].sh_addr;
             break;
             
         case SHT_GNU_versym:
@@ -1500,12 +1508,8 @@ void print_p_flags(int i, Elf64_Phdr *segment_headers)
 
 void read_segments(FILE* file_pointer)
 {    
-    Elf64_Ehdr header;  
-
-    fread(&header, sizeof(Elf64_Ehdr), 1, file_pointer); 
-
     printf("Тип файла ELF - ");
-    switch (header.e_type)
+    switch (type)
     {
         case ET_NONE:
             printf("Неизвестный тип\n");            
@@ -1551,7 +1555,7 @@ void read_segments(FILE* file_pointer)
             perror("Не удалось определить тип ELF-файла");
             break;
     }
-    printf("Точка входа 0x%lx\n", header.e_entry);
+    printf("Точка входа 0x%lx\n", entry);
     printf("Имеется %d заголовков программы, начиная со смещения %ld\n\n", \
     number_of_segment_headers, start_of_segment_headers);   
     printf("Заголовки программы:\n");
@@ -1719,7 +1723,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* fi
 
         case DT_NEEDED:
             printf("(NEEDED)");
-            read_needed_library(file_pointer, dynamic_arr, i);
+            //read_needed_library(file_pointer, dynamic_arr, i);
             break;
 
         case DT_PLTRELSZ:
@@ -1740,7 +1744,7 @@ void print_d_tag(int i, Elf64_Dyn *dynamic_arr, int number_of_elements, FILE* fi
         case DT_STRTAB:
             printf("(STRTAB)");
             printf("\t\t0x%04lx", dynamic_arr[i].d_un.d_ptr);
-            dynstr_offset = dynamic_arr[i].d_un.d_ptr;
+            printf(" %lx ", dynstr_offset);
             break;
 
         case DT_SYMTAB:
@@ -2273,7 +2277,6 @@ void read_section_dynamic(FILE* file_pointer) //не считает кол-во 
     {        
         printf("0x%016lx ", dynamic_arr[i].d_tag);
         print_d_tag(i, dynamic_arr, count, file_pointer);
-        //print_d_tag(i, dynamic_arr, count, file_pointer);
 
         printf("\n");
     }  
@@ -2843,13 +2846,13 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
 {
     Elf64_Vernaux vernaux[num];
     fseek(file_pointer, offset, SEEK_SET);
-    fread(vernaux, sizeof(Elf64_Vernaux), 1, file_pointer);
+    fread(vernaux, sizeof(vernaux), 1, file_pointer);
+    offset = offset - gnu_verneed_offset;
 
     for (int i = 0; i < num; i++)
     {
-        printf("  0x%04x:   ", offset);
-        offset = vernaux[i].vna_next;
-        read_name_vernaux(file_pointer, vernaux, i);
+        printf("  0x%04x:   ", offset);        
+        //read_name_vernaux(file_pointer, vernaux, i);
         printf("Флаги: ");
         switch (vernaux[i].vna_flags)
         {
@@ -2865,8 +2868,8 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
                 printf("нет ");
                 break;
         }       
-        printf("Hash: %ux ", vernaux[i].vna_hash); 
-        printf("Версия: \n");
+        printf("Версия: %d\n", vernaux[i].vna_other);
+        offset = offset + vernaux[i].vna_next;
     }
 }
 
@@ -2895,7 +2898,7 @@ void read_section_gnu_version(FILE* file_pointer)
 
     printf("Раздел Version needs \".gnu.version_r\", содержащий %d элементов:\n",
             gnu_verneed_num);
-    printf(" Адрес: 0x%016lx ", gnu_verneed_offset);
+    printf(" Адрес: 0x%016lx ", gnu_verneed_addr);
     printf(" Смещение: 0x%06lx ", gnu_verneed_offset);
     printf(" Ссылка: \n");
 
@@ -2903,17 +2906,17 @@ void read_section_gnu_version(FILE* file_pointer)
     {
         printf("  %06x: ", verneed[i].vn_next);
         printf("Версия: %d ", verneed[i].vn_version); 
-        read_file_name_verneed(file_pointer, verneed, i);   
+        //read_file_name_verneed(file_pointer, verneed, i);   
         printf(" Счетчик: %x\n", verneed[i].vn_cnt);
 
-        read_section_gnu_vernaux(file_pointer, verneed[i].vn_aux, verneed[i].vn_cnt);       
+        read_section_gnu_vernaux(file_pointer, gnu_verneed_offset + verneed[i].vn_aux, verneed[i].vn_cnt);       
     }
     printf("\n");  
 }
 
 int main()
 {   
-    char filename[] = "example";
+    char filename[] = "example_no_pie";
     FILE* file_pointer;
     file_pointer = fopen(filename, "r");
     if (!file_pointer)
