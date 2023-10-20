@@ -43,6 +43,9 @@ long gnu_verneed_addr = 0;
 long gnu_verneed_size = 0;
 int gnu_verneed_num = 0;
 
+int gnu_version_r_d_link = 0;
+int gnu_version_link = 0;
+
 //header
 void read_header(FILE* file_pointer)
 {
@@ -1466,6 +1469,12 @@ void read_sections(FILE* file_pointer)
         if (!strcmp(&string_keeper[section_headers[i].sh_name], ".dynstr"))
         {
             dynstr_offset = section_headers[i].sh_offset;
+            gnu_version_r_d_link = i;
+        }
+        if (!strcmp(&string_keeper[section_headers[i].sh_name], ".dynsym"))
+        {
+            dynstr_offset = section_headers[i].sh_offset;
+            gnu_version_link = i;
         }
         print_sh_type(i, section_headers);
         printf("0x%08lx ", section_headers[i].sh_addr);
@@ -2834,9 +2843,9 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
 
     for (int i = 0; i < num; i++)
     {
-        printf("  0x%04x:   ", offset);        
+        printf("  0x%04x: ", offset);        
         read_name_vernaux(file_pointer, vernaux, i);
-        printf("Флаги: ");
+        printf("\tФлаги: ");
         switch (vernaux[i].vna_flags)
         {
             case VER_FLG_BASE:
@@ -2883,7 +2892,7 @@ void read_section_gnu_version(FILE* file_pointer)
             gnu_verneed_num);
     printf(" Адрес: 0x%016lx ", gnu_verneed_addr);
     printf(" Смещение: 0x%06lx ", gnu_verneed_offset);
-    printf(" Ссылка: \n");
+    printf(" Ссылка: %d (.dynstr)\n", gnu_version_r_d_link);
 
     for (int i = 0; i < gnu_verneed_num; i++)
     {
