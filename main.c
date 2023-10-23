@@ -38,6 +38,10 @@ long dynsym_size = 0;
 long symtab_offset = 0;
 long symtab_size = 0;
 
+long gnu_versym_offset = 0;
+long gnu_versym_size = 0;
+long gnu_versym_addr = 0;
+
 long gnu_verneed_offset = 0;
 long gnu_verneed_addr = 0;
 long gnu_verneed_size = 0;
@@ -1154,8 +1158,9 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             
         case SHT_GNU_versym:
             printf("GNU_versym          ");
-            // gnu_versym_offset = section_headers[i].sh_offset;
-            // gnu_versym_size = section_headers[i].sh_size;
+            gnu_versym_offset = section_headers[i].sh_offset;
+            gnu_versym_size = section_headers[i].sh_size;
+            gnu_versym_addr = section_headers[i].sh_addr;
             break;
         
         //Дублируют по значению SHT_GNU_versym 
@@ -2533,7 +2538,7 @@ void read_section_rel_a_and_dynsym(FILE* file_pointer) //пока только �
     }   
 
     //displaying dynsym
-     printf("Таблица символов \".dynsym\" содержит %d элементов:\n", number_of_ds);
+    printf("Таблица символов \".dynsym\" содержит %d элементов:\n", number_of_ds);
     printf("   Чис:    Знач           Разм Тип      Связ    Vis     Индекс имени\n");
 
     for (int j = 0; j < number_of_ds; j++)
@@ -2820,6 +2825,50 @@ void read_section_symtab(FILE* file_pointer)
     printf("\n");  
 }
 
+void read_name_versym(FILE* file_pointer, int i)
+{
+    int number_of_ds = dynsym_size/sizeof(Elf64_Sym);
+    Elf64_Sym dynsym[number_of_ds];       
+    fseek(file_pointer, dynsym_offset, SEEK_SET);
+    fread(dynsym, sizeof(Elf64_Sym), number_of_ds, file_pointer); 
+
+    char prev;
+    fseek(file_pointer, dynstr_offset + dynsym[i].st_name, SEEK_SET);
+    while (1)
+    {
+        prev = fgetc(file_pointer);
+        printf("%c", prev);
+        if (prev == '\0') { break; }
+    }
+    printf("      "); 
+}
+
+void read_section_gnu_version(FILE* file_pointer)
+{
+    int gnu_versym_num = gnu_versym_size/sizeof(Elf64_Versym); 
+    Elf64_Versym versym[gnu_versym_num];
+    fseek(file_pointer, gnu_versym_offset, SEEK_SET);
+    fread(versym, sizeof(Elf64_Versym), gnu_versym_num, file_pointer);
+
+    printf("Раздел симвлов версии \".gnu.version\" содержит %d элементов:\n", gnu_versym_num);
+    printf(" Адрес: 0x%016lx  ", gnu_versym_addr);
+    printf("Смещение: 0x%06lx  ", gnu_versym_offset);
+    printf("Ссылка: %d (.dynsym)\n", gnu_version_link);    
+
+    for (int i = 0; i < gnu_versym_num; i++)
+    {
+        if (i%4 == 0) { printf("  %03d:\t", i); }
+
+        printf("%d ", versym[i]);  
+        if (versym[i] == VER_NDX_LOCAL) { printf("(*локальный*)      "); }
+        else if (versym[i] == VER_NDX_GLOBAL) { printf("(*глобальный*)      "); }
+        else if (versym[i] > 1) { read_name_versym(file_pointer, i); }
+
+        if (i%4 == 3) { printf("\n"); }  
+    }
+    printf("\n"); 
+}
+
 void read_name_vernaux(FILE* file_pointer, Elf64_Vernaux *vernaux, int i)
 {
     printf("Имя: ");
@@ -2878,7 +2927,7 @@ void read_file_name_verneed(FILE* file_pointer, Elf64_Verneed *verneed, int i)
     }
 }
 
-void read_section_gnu_version(FILE* file_pointer)
+void read_section_gnu_version_r(FILE* file_pointer)
 {
     Elf64_Verneed verneed[gnu_verneed_num];    
     fseek(file_pointer, gnu_verneed_offset, SEEK_SET);
@@ -2906,6 +2955,7 @@ void read_section_gnu_version(FILE* file_pointer)
     printf("\n");  
 }
 
+
 int main()
 {   
     char filename[] = "example";
@@ -2925,6 +2975,7 @@ int main()
     read_section_rel_a_and_dynsym(file_pointer);
     read_section_symtab(file_pointer);
     read_section_gnu_version(file_pointer);
+    //read_section_gnu_version_r(file_pointer);
 
 
     fclose(file_pointer);
