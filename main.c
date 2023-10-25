@@ -2847,7 +2847,6 @@ void read_name_versym(FILE* file_pointer, int i)
 
 void read_name_vernaux(FILE* file_pointer, Elf64_Vernaux *vernaux, int i)
 {
-    printf("Имя: ");
     char prev;
     fseek(file_pointer, dynstr_offset + vernaux[i].vna_name, SEEK_SET);
     while (1)
@@ -2856,7 +2855,25 @@ void read_name_vernaux(FILE* file_pointer, Elf64_Vernaux *vernaux, int i)
         printf("%c", prev);
         if (prev == '\0') { break; }
     }
-    printf(" ");
+}
+
+void read_from_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half num, int ver)
+{
+    Elf64_Vernaux vernaux[num];
+    fseek(file_pointer, offset, SEEK_SET);
+    fread(vernaux, sizeof(vernaux), 1, file_pointer);
+    offset = offset - gnu_verneed_offset;
+
+    for (int i = 0; i < num; i++)
+    {
+        if (ver == vernaux[i].vna_other)
+        {
+            printf("(");
+            read_name_vernaux(file_pointer, vernaux, i);
+            printf(")      ");
+        }
+        offset = offset + vernaux[i].vna_next;
+    }
 }
 
 void read_section_gnu_version(FILE* file_pointer)
@@ -2867,66 +2884,6 @@ void read_section_gnu_version(FILE* file_pointer)
     fseek(file_pointer, gnu_versym_offset, SEEK_SET);
     fread(versym, sizeof(Elf64_Versym), gnu_versym_num, file_pointer);
 
-    //verneed (.gnu.version_r)
-    Elf64_Verneed verneed[gnu_verneed_num];    
-    fseek(file_pointer, gnu_verneed_offset, SEEK_SET);
-    fread(verneed, sizeof(Elf64_Verneed), gnu_verneed_num, file_pointer); 
-    //for reading vernaux
-    int vernaux_num = 0;
-    Elf64_Word vernaux_offset[gnu_verneed_num];
-    for (int i = 0; i < gnu_verneed_num; i++)
-    {
-        vernaux_num = vernaux_num + verneed[i].vn_cnt;
-        vernaux_offset[i] = verneed[i].vn_aux;
-        //printf("vernaux_num=%d", vernaux_num);
-        printf("vernaux_offset: 0x%04x \n", vernaux_offset[i]);
-    }
-
-    //vernaux (.gnu.version_r)
-    Elf64_Vernaux vernaux[vernaux_num];
-    for (int i = 0; i < gnu_verneed_num; i++)
-    {        
-        for (int j = 0; i < verneed[j].vn_cnt; i++)
-        {
-            fseek(file_pointer, gnu_verneed_offset + vernaux_offset[j], SEEK_SET);
-            if (j > 0)
-            {
-                fread(vernaux + verneed[j - 1].vn_cnt, sizeof(vernaux), verneed[j].vn_cnt, file_pointer);
-            }
-            else
-            {
-                fread(vernaux, sizeof(vernaux), verneed[j].vn_cnt, file_pointer);
-            }            
-        }
-        
-        for (int k = 0; k < vernaux_num; k++)
-        {
-            //printf("vernaux_offset: 0x%04x \n", vernaux_offset[0]);
-            int offset = 0;
-            printf("  0x%04x: ", vernaux_offset[i] + offset);  
-            read_name_vernaux(file_pointer, vernaux, k);
-            printf("\tФлаги: ");
-            switch (vernaux[k].vna_flags)
-            {
-                case VER_FLG_BASE:
-                    printf("BASE ");
-                    break;
-
-                case VER_FLG_WEAK:
-                    printf("WEAK ");
-                    break;
-
-                default:
-                    printf("нет ");
-                    break;
-            }       
-            printf("Версия: %d\n", vernaux[k].vna_other);
-            offset = vernaux[k].vna_next;
-        }
-        printf("\n");
-    }
-
-    //dispaying .gnu.version
     printf("Раздел симвлов версии \".gnu.version\" содержит %d элементов:\n", gnu_versym_num);
     printf(" Адрес: 0x%016lx  ", gnu_versym_addr);
     printf("Смещение: 0x%06lx  ", gnu_versym_offset);
@@ -2941,40 +2898,21 @@ void read_section_gnu_version(FILE* file_pointer)
         else if (versym[i] == VER_NDX_GLOBAL) { printf("(*глобальный*)      "); }
         else if (versym[i] > 1) 
         { 
-            //read_name_versym(file_pointer, i); 
-            for (int j = 0; j < gnu_verneed_num; j++)
-            {
-                for (int k = 0; k < verneed[j].vn_cnt; k++)
-                {
-                    if (versym[i] == vernaux[k].vna_other) 
-                    {
-                        printf(" %d %d ", versym[i], vernaux[k].vna_other);
-                        read_name_vernaux(file_pointer, vernaux, k);
-                    }
-                }
+            int ver = versym[i];
+
+            Elf64_Verneed verneed[gnu_verneed_num];    
+            fseek(file_pointer, gnu_verneed_offset, SEEK_SET);
+            fread(verneed, sizeof(Elf64_Verneed), gnu_verneed_num, file_pointer); 
+            for (int i = 0; i < gnu_verneed_num; i++)
+            {  
+                read_from_vernaux(file_pointer, gnu_verneed_offset + verneed[i].vn_aux, verneed[i].vn_cnt, ver);       
             }
         }
 
         if (i%4 == 3) { printf("\n"); }  
     }
-    printf("\n"); 
+    printf("\n\n"); 
 }
-
-/*----------------------------------------------------------------------------*/
-
-// void read_name_vernaux(FILE* file_pointer, Elf64_Vernaux *vernaux, int i)
-// {
-//     printf("Имя: ");
-//     char prev;
-//     fseek(file_pointer, dynstr_offset + vernaux[i].vna_name, SEEK_SET);
-//     while (1)
-//     {
-//         prev = fgetc(file_pointer);
-//         printf("%c", prev);
-//         if (prev == '\0') { break; }
-//     }
-//     printf(" ");
-// }
 
 void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half num)
 {
@@ -2985,7 +2923,8 @@ void read_section_gnu_vernaux(FILE* file_pointer, Elf64_Word offset, Elf64_Half 
 
     for (int i = 0; i < num; i++)
     {
-        printf("  0x%04x: ", offset);        
+        printf("  0x%04x: ", offset);   
+        printf("Имя: ");  
         read_name_vernaux(file_pointer, vernaux, i);
         printf("\tФлаги: ");
         switch (vernaux[i].vna_flags)
@@ -3027,8 +2966,6 @@ void read_section_gnu_version_r(FILE* file_pointer)
     fread(verneed, sizeof(Elf64_Verneed), gnu_verneed_num, file_pointer); 
 
     fseek(file_pointer, gnu_verneed_offset, SEEK_SET); 
-    // char verneed_string_keeper[gnu_verneed_size];
-    // fread(verneed_string_keeper, gnu_verneed_size, 1, file_pointer);  
 
     printf("Раздел Version needs \".gnu.version_r\", содержащий %d элементов:\n",
             gnu_verneed_num);
@@ -3051,7 +2988,7 @@ void read_section_gnu_version_r(FILE* file_pointer)
 
 int main()
 {   
-    char filename[] = "example";
+    char filename[] = "example_dynamic";
     FILE* file_pointer;
     file_pointer = fopen(filename, "r");
     if (!file_pointer)
@@ -3068,8 +3005,7 @@ int main()
     read_section_rel_a_and_dynsym(file_pointer);
     read_section_symtab(file_pointer);
     read_section_gnu_version(file_pointer);
-    //read_section_gnu_version_r(file_pointer);
-
+    read_section_gnu_version_r(file_pointer);
 
     fclose(file_pointer);
     return 0;
