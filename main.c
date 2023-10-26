@@ -50,6 +50,9 @@ int gnu_verneed_num = 0;
 int gnu_version_r_d_link = 0;
 int gnu_version_link = 0;
 
+long note_offset = 0;
+long note_size = 0;
+
 //header
 void read_header(FILE* file_pointer)
 {
@@ -1059,6 +1062,8 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             
         case SHT_NOTE:
             printf("NOTE                ");
+            note_offset = section_headers[i].sh_offset;
+            note_size = section_headers[i].sh_size;
             break;
                 
         case SHT_NOBITS:
@@ -2985,6 +2990,40 @@ void read_section_gnu_version_r(FILE* file_pointer)
     printf("\n");  
 }
 
+void read_section_note(FILE* file_pointer)
+{
+    int note_num = note_size/sizeof(Elf64_Nhdr);
+    Elf64_Nhdr note[note_num];
+    fseek(file_pointer, note_offset, SEEK_SET);
+    fread(note, note_size, 1, file_pointer);
+
+    printf("Displaying notes foind in: \n");
+    printf("Владелец Размер данных Описание\n");
+    for (int i = 0; i < note_num; i++)
+    {
+        // printf("%x\t", note[i].n_namesz);
+        // printf("%x\t", note[i].n_descsz);
+        // printf("%x\n", note[i].n_type);
+
+        fseek(file_pointer, note_offset + 3*4, SEEK_SET);
+        char prev;
+        while (1)
+        {
+            prev = fgetc(file_pointer);
+            printf("%c", prev);
+            if (prev == '\0') 
+            { 
+                printf("\t");
+                break; 
+            }
+        }
+
+        printf("0x%08x\t", note[i].n_descsz);
+
+        //word 0: OS descriptor
+         
+    }     
+}
 
 int main()
 {   
@@ -3006,6 +3045,7 @@ int main()
     read_section_symtab(file_pointer);
     read_section_gnu_version(file_pointer);
     read_section_gnu_version_r(file_pointer);
+    read_section_note(file_pointer);
 
     fclose(file_pointer);
     return 0;
