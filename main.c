@@ -50,8 +50,9 @@ int gnu_verneed_num = 0;
 int gnu_version_r_d_link = 0;
 int gnu_version_link = 0;
 
-long note_offset = 0;
-long note_size = 0;
+long note_offset[4] = { 0, 0, 0, 0};
+long note_size[4] = { 0, 0, 0, 0};
+int note_index = 0;
 
 //header
 void read_header(FILE* file_pointer)
@@ -1062,8 +1063,9 @@ void print_sh_type(int i, Elf64_Shdr *section_headers)
             
         case SHT_NOTE:
             printf("NOTE                ");
-            note_offset = section_headers[i].sh_offset;
-            note_size = section_headers[i].sh_size;
+            note_offset[note_index] = section_headers[i].sh_offset;
+            note_size[note_index] = section_headers[i].sh_size;
+            note_index++;
             break;
                 
         case SHT_NOBITS:
@@ -2848,8 +2850,6 @@ void read_name_versym(FILE* file_pointer, int i)
     printf("      "); 
 }
 
-/*----------------------------------------------------------------------------*/
-
 void read_name_vernaux(FILE* file_pointer, Elf64_Vernaux *vernaux, int i)
 {
     char prev;
@@ -2992,20 +2992,37 @@ void read_section_gnu_version_r(FILE* file_pointer)
 
 void read_section_note(FILE* file_pointer)
 {
-    int note_num = note_size/sizeof(Elf64_Nhdr);
-    Elf64_Nhdr note[note_num];
-    fseek(file_pointer, note_offset, SEEK_SET);
-    fread(note, note_size, 1, file_pointer);
-
-    printf("Displaying notes foind in: %s\n", NOTE_GNU_PROPERTY_SECTION_NAME);
-    printf("Владелец Размер данных Описание\n");
-    for (int i = 0; i < note_num; i++)
+    for (int i = 0; i < note_index; i++)
     {
-        // printf("%x\t", note[i].n_namesz);
-        // printf("%x\t", note[i].n_descsz);
-        // printf("%x\n", note[i].n_type);
+        fseek(file_pointer, note_offset[i], SEEK_SET);
+        Elf64_Nhdr note;
+        fread(&note, sizeof(Elf64_Nhdr), 1, file_pointer);
 
-        fseek(file_pointer, note_offset + 3*4, SEEK_SET);
+        printf("Displaying notes foind in: ");
+        switch (note.n_type)
+        {
+            case NT_GNU_ABI_TAG:
+                printf(".note.ABI-tag");
+                break;
+
+            case NT_GNU_HWCAP:
+                printf(".note.gnu.hwcap");
+                break;
+
+            case NT_GNU_BUILD_ID:
+                printf(".note.gnu.build-id");
+                break;
+
+            case NT_GNU_PROPERTY_TYPE_0:
+                printf(".note.gnu.property");
+                break;
+            
+            default:
+                printf("Не опр.");
+                break;
+        }
+        printf("\n  Владелец     Размер данных     Description\n  ");
+        fseek(file_pointer, note_offset[i] + 3*4, SEEK_SET);
         char prev;
         while (1)
         {
@@ -3018,11 +3035,63 @@ void read_section_note(FILE* file_pointer)
             }
         }
 
-        printf("0x%08lx\t", note_size);
-        switch (note[i].n_type)
+        printf("\t0x%08lx       ", note_size[i]);
+        switch (note.n_type)
         {
             case NT_GNU_ABI_TAG:
-                printf("NT_GNU_ABI_TAG");
+                printf("NT_GNU_ABI_TAG\t\t");
+                int word[4];
+                for (int j = 0; j < 4; j++)
+                {
+                    //j = 0, word 0: OS descriptor
+                    //j = 1, word 1: major version of the ABI
+                    //j = 2, word 2: minor version of the ABI
+                    //j = 3, word 3: subminor version of the ABI
+                    fseek(file_pointer, note_offset[i] + (4+j)*4, SEEK_SET);
+
+                    for (int k = 0; k < 4; k++) { word[k] = fgetc(file_pointer); }
+
+                    if (j == 0)
+                    {
+                        printf("ОС: ");
+                        switch (word[0])
+                        {
+                            case ELF_NOTE_OS_LINUX:
+                                printf("Linux");
+                                break;
+
+                            case ELF_NOTE_OS_GNU: 
+                                printf("GNU");
+                                break;
+
+                            case ELF_NOTE_OS_SOLARIS2:
+                                printf("SOLARIS2");
+                                break;
+
+                            case ELF_NOTE_OS_FREEBSD:
+                                printf("FREEBSD");
+                                break;
+
+                            default:
+                                printf("Не опр.");
+                                break;
+                        }
+                        printf(", ABI: ");
+                    } 
+                    else
+                    {   
+                        int index = 0;
+                        while ((word[index] != 0 && index < 4) || (word[0] == 0 && index == 0))
+                        {
+                            printf("%d", word[index]);
+                            index++;
+                        }
+                        if (j == 3) { printf("\n"); } 
+                        else { printf("."); }
+
+                        index = 0;
+                    }
+                }
                 break;
 
             case NT_GNU_HWCAP:
@@ -3030,7 +3099,17 @@ void read_section_note(FILE* file_pointer)
                 break;
 
             case NT_GNU_BUILD_ID:
-                printf("NT_GNU_BUILD_ID");
+                printf("NT_GNU_BUILD_ID\t");
+                printf("ID сборки: ");
+                fseek(file_pointer, note_offset[i] + 4*4, SEEK_SET);
+                int prev, counter = 0;
+                while (1)
+                {
+                    prev = fgetc(file_pointer);
+                    printf("%x", prev);
+                    counter++;
+                    if (counter == note.n_descsz) { break; }
+                }
                 break;
 
             case NT_GNU_PROPERTY_TYPE_0:
@@ -3041,67 +3120,13 @@ void read_section_note(FILE* file_pointer)
                 printf("Не опр.");
                 break;
         }
-        printf("\t\t");
-
-        int word[4];
-        for (int j = 0; j < 4; j++)
-        {
-            //j = 0, word 0: OS descriptor
-            //j = 1, word 1: major version of the ABI
-            //j = 2, word 2: minor version of the ABI
-            //j = 3, word 3: subminor version of the ABI
-            fseek(file_pointer, note_offset + (4+j)*4, SEEK_SET);
-
-            for (int k = 0; k < 4; k++) { word[k] = fgetc(file_pointer); }
-
-            if (j == 0)
-            {
-                printf("ОС: ");
-                switch (word[0])
-                {
-                    case ELF_NOTE_OS_LINUX:
-                        printf("Linux");
-                        break;
-
-                    case ELF_NOTE_OS_GNU: 
-                        printf("GNU");
-                        break;
-
-                    case ELF_NOTE_OS_SOLARIS2:
-                        printf("SOLARIS2");
-                        break;
-
-                    case ELF_NOTE_OS_FREEBSD:
-                        printf("FREEBSD");
-                        break;
-
-                    default:
-                        printf("Не опр.");
-                        break;
-                }
-                printf(", ABI: ");
-            } 
-            else
-            {   
-                int index = 0;
-                while ((word[index] != 0 && index < 4) || (word[0] == 0 && index == 0))
-                {
-                    printf("%d", word[index]);
-                    index++;
-                }
-                if (j == 3) { printf("\n"); } 
-                else { printf("."); }
-
-                index = 0;
-            }
-        }
-        printf("\n");         
-    }     
+        printf("\n\n"); 
+    }
 }
 
 int main()
 {   
-    char filename[] = "example_dynamic";
+    char filename[] = "example";
     FILE* file_pointer;
     file_pointer = fopen(filename, "r");
     if (!file_pointer)
