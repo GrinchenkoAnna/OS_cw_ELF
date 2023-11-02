@@ -3113,7 +3113,17 @@ void read_section_note(FILE* file_pointer)
                 break;
 
             case NT_GNU_PROPERTY_TYPE_0:
-                printf("NT_GNU_PROPERTY_TYPE_0");
+                printf("NT_GNU_PROPERTY_TYPE_0\t");
+                fseek(file_pointer, note_offset[i] + 4*4, SEEK_SET);
+                //!!!
+                // counter = 0;
+                // while (1)
+                // {
+                //     prev = fgetc(file_pointer);
+                //     printf("%x", prev);
+                //     counter++;
+                //     if (counter == note.n_descsz) { break; }
+                // }
                 break;
             
             default:
